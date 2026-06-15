@@ -10,6 +10,20 @@ match_threshold: 0.87
 template_dir: "templates"
 log_file: "bot.log"
 
+autonomous_learning:
+  enabled: true
+  data_dir: "learning_data"
+  screenshot_interval_seconds: 2.5
+  click_result_delay_seconds: 1.0
+  changed_hash_bits: 10
+  candidate_cooldown_seconds: 4.0
+  max_candidates_per_screen: 12
+  min_candidate_width: 60
+  min_candidate_height: 24
+  max_candidate_screen_width: 0.65
+  max_candidate_screen_height: 0.22
+  edge_margin: 8
+
 hotkeys:
   toggle: "ctrl+alt+s"
   quit: "ctrl+alt+q"
@@ -56,4 +70,3 @@ shop_strategy:
   start_after_shop_template: "fight"
   clicks_per_slot: 1
   delay_between_clicks_seconds: 0.25
-

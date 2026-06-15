@@ -15,6 +15,8 @@ import pyautogui
 import pygetwindow as gw
 import yaml
 
+from dwarves_autoplayer.learner import AutonomousLearner
+
 
 ROOT = Path.cwd()
 CONFIG_PATH = ROOT / "config.yaml"
@@ -69,7 +71,7 @@ def load_templates(template_dir: Path) -> dict[str, np.ndarray]:
         template_dir.mkdir(parents=True, exist_ok=True)
         return templates
 
-    for path in template_dir.glob("*.png"):
+    for path in template_dir.rglob("*.png"):
         image = cv2.imread(str(path), cv2.IMREAD_COLOR)
         if image is None:
             logging.warning("Could not read template %s", path)
@@ -155,13 +157,14 @@ def perform_shop_cycle(window, config: dict[str, Any], templates: dict[str, np.n
 
 
 class Bot:
-    def __init__(self, config: dict[str, Any], print_mouse: bool = False) -> None:
+    def __init__(self, config: dict[str, Any], print_mouse: bool = False, auto_start: bool = False) -> None:
         self.config = config
         self.print_mouse = print_mouse
-        self.running = False
+        self.running = auto_start
         self.quit_requested = False
         self.last_action_at: dict[str, float] = {}
         self.templates = load_templates(ROOT / config.get("template_dir", "templates"))
+        self.learner = AutonomousLearner(ROOT, config)
 
     def install_hotkeys(self) -> None:
         hotkeys = self.config.get("hotkeys", {})
@@ -187,6 +190,7 @@ class Bot:
     def step(self, window) -> bool:
         threshold = float(self.config.get("match_threshold", 0.87))
         screen = screenshot_window(window)
+        screen_id = self.learner.observe(screen) if self.learner.enabled else ""
         actions = sorted(self.config.get("actions", []), key=lambda item: int(item.get("priority", 0)), reverse=True)
 
         for action in actions:
@@ -214,6 +218,24 @@ class Bot:
             time.sleep(float(self.config.get("after_click_delay_seconds", 0.75)))
             return True
 
+        if self.learner.enabled:
+            candidate = self.learner.choose_candidate(screen, screen_id)
+            if candidate:
+                x, y = candidate.center
+                logging.info(
+                    "Learner exploring screen=%s candidate=(%s,%s,%s,%s) score=%.3f",
+                    screen_id[:8],
+                    candidate.x,
+                    candidate.y,
+                    candidate.w,
+                    candidate.h,
+                    candidate.score,
+                )
+                self.learner.mark_clicked(screen_id, screen, candidate)
+                click_window_point(window, x, y, "learner candidate")
+                time.sleep(float(self.config.get("after_click_delay_seconds", 0.75)))
+                return True
+
         return False
 
     def run(self) -> None:
@@ -222,6 +244,8 @@ class Bot:
 
         title_parts = self.config.get("window_title_contains", ["Dwarves"])
         logging.info("Loaded %s templates: %s", len(self.templates), ", ".join(sorted(self.templates)) or "none")
+        if self.learner.enabled:
+            logging.info("Autonomous learner enabled. Screenshots/state go to %s", self.learner.data_dir)
         logging.info("Press %s to start/pause. Press %s to quit.", self.config["hotkeys"]["toggle"], self.config["hotkeys"]["quit"])
 
         while not self.quit_requested:
@@ -250,6 +274,7 @@ class Bot:
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     parser.add_argument("--print-mouse", action="store_true", help="Log mouse coordinates relative to the game window.")
+    parser.add_argument("--auto-start", action="store_true", help="Start running immediately instead of waiting for the toggle hotkey.")
     return parser.parse_args()
 
 
@@ -257,7 +282,7 @@ def main() -> None:
     args = parse_args()
     config = load_config()
     setup_logging(config)
-    bot = Bot(config, print_mouse=args.print_mouse)
+    bot = Bot(config, print_mouse=args.print_mouse, auto_start=args.auto_start)
     bot.run()
 
 

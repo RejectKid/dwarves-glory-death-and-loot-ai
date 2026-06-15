@@ -11,8 +11,8 @@ dist/
 
 bot.log
 debug_screens/
+learning_data/
 
 # Keep user-captured templates local by default. Remove this if you want to version them.
 templates/*.png
 !templates/.gitkeep
-

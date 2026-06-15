@@ -59,11 +59,21 @@ The image is saved into `templates\`.
 
 ## Run
 
+For hands-off exploration, use:
+
+```powershell
+.\run_autonomous.bat
+```
+
+This starts immediately. It captures screenshots, fingerprints repeated screens, detects button-like UI regions, tries clicks, and records which clicks changed the screen. Its learning state is saved in `learning_data\`.
+
+For the older template-first mode, use:
+
 ```powershell
 .\run_bot.bat
 ```
 
-Hotkeys:
+Hotkeys in either mode:
 
 - `Ctrl+Alt+S`: start/pause
 - `Ctrl+Alt+Q`: quit
@@ -85,13 +95,27 @@ The default strategy is deliberately simple:
 2. If claim/continue/ok/confirm is visible, click it.
 3. If shop is visible, buy from configured slots, optionally reroll, then start the next fight.
 4. If start/fight is visible, click it.
-5. If nothing is recognized, wait and scan again.
+5. If nothing is recognized and autonomous learning is enabled, try the most promising button-like region and remember whether the screen changed.
+6. If nothing is clickable, wait and scan again.
 
 Edit `config.yaml` to change priorities, click slots, delays, and confidence thresholds.
+
+## Autonomous Learning
+
+Autonomous mode is a bootstrapping explorer, not a full trained AI model. It does not read game memory or know item stats. It learns by trying visible UI candidates and tracking outcomes.
+
+It creates:
+
+- `learning_data\screenshots\`: periodic game screenshots
+- `learning_data\templates\`: crops of clicked UI candidates
+- `learning_data\state.json`: remembered screens, candidates, attempts, and successes
+
+The first run may make dumb clicks while it explores. Later runs should reuse clicks that changed screens on the same visual state.
 
 ## Project Layout
 
 - `src\dwarves_autoplayer\bot.py`: main autoplayer loop
+- `src\dwarves_autoplayer\learner.py`: screenshot capture and autonomous click learner
 - `src\dwarves_autoplayer\capture_template.py`: template capture helper
 - `config.yaml`: strategy and matching configuration
 - `templates\`: your local button/label screenshots
