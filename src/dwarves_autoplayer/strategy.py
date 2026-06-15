@@ -278,6 +278,7 @@ class KnowledgeStrategy:
             StrategyActionSpec("storage_try_equip_center", 0.500, 0.500, 1.0, 0.5),
             StrategyActionSpec("nav_main_hall_for_equipping", nav["main_hall"], 0.955, 1.0, 0.8),
             *self._equip_drag_actions(),
+            *self._relic_drag_actions(),
             StrategyActionSpec("nav_tavern", nav["tavern"], 0.955, 1.0, 0.8),
             StrategyActionSpec("tavern_try_middle", 0.500, 0.500, 1.0, 0.5),
             StrategyActionSpec("nav_main_hall", nav["main_hall"], 0.955, 1.0, 0.8),
@@ -296,6 +297,32 @@ class KnowledgeStrategy:
         for index, slot in enumerate(inventory_slots[:8], start=1):
             target = front if index % 2 else damage
             target_name = "front_dwarf" if index % 2 else "damage_dwarf"
+            actions.append(
+                StrategyActionSpec(
+                    f"equip_inventory_slot_{index}_to_{target_name}",
+                    float(slot[0]),
+                    float(slot[1]),
+                    1.0,
+                    0.6,
+                    "drag",
+                    float(target[0]),
+                    float(target[1]),
+                )
+            )
+        return actions
+
+    def _relic_drag_actions(self) -> list[StrategyActionSpec]:
+        relic_targets = self.config.get("relic_targets", {})
+        inventory_slots = self.config.get("inventory_slots", {}).get("row1", [])
+        targets = [
+            ("front_relic_1", relic_targets.get("front_relic_1", [0.817, 0.485])),
+            ("front_relic_2", relic_targets.get("front_relic_2", [0.843, 0.485])),
+            ("damage_relic_1", relic_targets.get("damage_relic_1", [0.910, 0.485])),
+            ("damage_relic_2", relic_targets.get("damage_relic_2", [0.936, 0.485])),
+        ]
+        actions: list[StrategyActionSpec] = []
+        for index, slot in enumerate(inventory_slots[:8], start=1):
+            target_name, target = targets[(index - 1) % len(targets)]
             actions.append(
                 StrategyActionSpec(
                     f"equip_inventory_slot_{index}_to_{target_name}",

@@ -41,6 +41,11 @@ strategy:
   equip_targets:
     front_dwarf: [0.840, 0.360]
     damage_dwarf: [0.935, 0.360]
+  relic_targets:
+    front_relic_1: [0.817, 0.485]
+    front_relic_2: [0.843, 0.485]
+    damage_relic_1: [0.910, 0.485]
+    damage_relic_2: [0.936, 0.485]
   inventory_slots:
     row1:
       - [0.085, 0.675]
