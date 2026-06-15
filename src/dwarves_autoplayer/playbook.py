@@ -72,6 +72,7 @@ class DwarvesPlaybook:
             return None
 
         self.last_action_at[action.name] = now
+        self.strategy.note_action_chosen(action.name, state.value)
         return action
 
     def _action_for_state(self, screen: np.ndarray, state: GameState) -> PlaybookAction | None:

@@ -22,9 +22,22 @@ state_playbook:
 strategy:
   # Until OCR is added, the safest battle-selection rule is to click a visible
   # battle card and rotate if the screen does not change.
+  economy_cycle_enabled: true
   battle_card_preference: "center_left_right"
+  bottom_menu:
+    tavern_3: 0.347
+    storage_4: 0.400
+    forge_5: 0.452
+    main_hall_6: 0.505
+    recruit_dwarves_7: 0.556
+    loot_8: 0.608
+    battle_9: 0.660
+    raid_0: 0.714
   priorities:
     - "advance battle loop"
+    - "recruit additional dwarves"
+    - "buy/equip useful loot"
+    - "visit forge/storage/tavern between fights"
     - "avoid destructive actions"
     - "prefer fights over idle menus"
     - "use wiki/reddit/video baseline for strategy once screen text is readable"

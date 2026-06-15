@@ -96,6 +96,19 @@ The runtime bot is now a state machine:
 - `battle_running`: wait and keep battle speed high
 - `battle_report`: advance back toward the hall/rewards loop
 
+It also runs an economy cycle through the bottom hotbar so the run does not only fight:
+
+- `3`: tavern
+- `4`: storage
+- `5`: forge
+- `6`: main hall
+- `7`: recruit dwarves
+- `8`: loot
+- `9`: battle
+- `0`: raid probe
+
+The menu positions are ratios in `config.yaml` under `strategy.bottom_menu`. The first version uses broad, safe clicks in those menus because OCR is not installed yet; the next upgrade should read menu text and item/unit names before buying or upgrading.
+
 The knowledge baseline currently informs the bot at the policy level: favor battle-loop progress, avoid destructive menus, keep fights moving, and treat shopping/build strategy as a next OCR-driven upgrade. The bot logs how many sources and video samples it loaded at startup.
 
 ## Diagnose
