@@ -1,0 +1,59 @@
+window_title_contains:
+  - "Dwarves"
+  - "Glory"
+  - "Death"
+  - "Loot"
+
+loop_delay_seconds: 0.35
+after_click_delay_seconds: 0.75
+match_threshold: 0.87
+template_dir: "templates"
+log_file: "bot.log"
+
+hotkeys:
+  toggle: "ctrl+alt+s"
+  quit: "ctrl+alt+q"
+
+actions:
+  - name: "retry"
+    templates: ["retry", "defeat"]
+    click: "best"
+    priority: 100
+    cooldown_seconds: 2.0
+
+  - name: "confirm"
+    templates: ["confirm", "ok"]
+    click: "best"
+    priority: 90
+    cooldown_seconds: 0.8
+
+  - name: "claim_reward"
+    templates: ["claim", "continue"]
+    click: "best"
+    priority: 80
+    cooldown_seconds: 1.0
+
+  - name: "shop_cycle"
+    templates: ["shop"]
+    click: "shop_slots"
+    priority: 70
+    cooldown_seconds: 4.0
+
+  - name: "start_fight"
+    templates: ["start", "fight"]
+    click: "best"
+    priority: 60
+    cooldown_seconds: 1.2
+
+shop_strategy:
+  # Coordinates are relative to the game window: x and y from the top-left.
+  # These are placeholders. Use --print-mouse in the bot if you want to tune them.
+  buy_slots:
+    - [520, 620]
+    - [700, 620]
+    - [880, 620]
+  reroll_button: null
+  start_after_shop_template: "fight"
+  clicks_per_slot: 1
+  delay_between_clicks_seconds: 0.25
+

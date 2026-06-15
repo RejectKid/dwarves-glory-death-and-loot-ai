@@ -1,0 +1,30 @@
+[build-system]
+requires = ["setuptools>=69", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "dwarves-autoplayer"
+version = "0.1.0"
+description = "Local screen automation autoplayer for Dwarves: Glory, Death and Loot."
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+  "opencv-python",
+  "numpy",
+  "Pillow",
+  "PyAutoGUI",
+  "PyYAML",
+  "keyboard",
+  "pygetwindow",
+]
+
+[project.scripts]
+dwarves-bot = "dwarves_autoplayer.bot:main"
+dwarves-capture-template = "dwarves_autoplayer.capture_template:main"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
