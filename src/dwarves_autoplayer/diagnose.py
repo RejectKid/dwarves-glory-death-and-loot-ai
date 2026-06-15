@@ -7,6 +7,7 @@ import cv2
 
 from dwarves_autoplayer.bot import load_config
 from dwarves_autoplayer.playbook import DwarvesPlaybook
+from dwarves_autoplayer.strategy import KnowledgeStrategy
 
 
 def parse_args() -> argparse.Namespace:
@@ -30,7 +31,8 @@ def main() -> None:
     if image is None:
         raise SystemExit(f"Could not read image: {path}")
 
-    playbook = DwarvesPlaybook(load_config())
+    config = load_config()
+    playbook = DwarvesPlaybook(config, KnowledgeStrategy(Path.cwd(), config))
     state = playbook.classify(image)
     action = playbook.choose_action(image)
 
@@ -47,4 +49,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

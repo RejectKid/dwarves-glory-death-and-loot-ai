@@ -12,6 +12,7 @@ import yaml
 
 from dwarves_autoplayer.bot import load_config
 from dwarves_autoplayer.playbook import DwarvesPlaybook
+from dwarves_autoplayer.strategy import KnowledgeStrategy
 
 
 ROOT = Path.cwd()
@@ -62,7 +63,8 @@ def process_video(video_path: Path, args: argparse.Namespace) -> dict[str, Any]:
     duration = frame_count / fps if frame_count else 0.0
     step_frames = max(1, int(fps * args.interval_seconds))
 
-    playbook = DwarvesPlaybook(load_config())
+    config = load_config()
+    playbook = DwarvesPlaybook(config, KnowledgeStrategy(ROOT, config))
     out_dir = output_dir(video_path)
     frames_dir = out_dir / "representative_frames"
     if frames_dir.exists():

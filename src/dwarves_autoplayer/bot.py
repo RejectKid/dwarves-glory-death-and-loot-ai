@@ -4,7 +4,6 @@ import argparse
 import logging
 import sys
 import time
-from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
@@ -15,22 +14,13 @@ import pyautogui
 import pygetwindow as gw
 import yaml
 
-from dwarves_autoplayer.baseline import load_baseline
-from dwarves_autoplayer.learner import AutonomousLearner
 from dwarves_autoplayer.playbook import DwarvesPlaybook
+from dwarves_autoplayer.recorder import ScreenRecorder
+from dwarves_autoplayer.strategy import KnowledgeStrategy
 
 
 ROOT = Path.cwd()
 CONFIG_PATH = ROOT / "config.yaml"
-
-
-@dataclass
-class Match:
-    name: str
-    score: float
-    center_x: int
-    center_y: int
-    rect: tuple[int, int, int, int]
 
 
 def load_config() -> dict[str, Any]:
@@ -53,78 +43,16 @@ def setup_logging(config: dict[str, Any]) -> None:
 def find_game_window(title_parts: list[str]):
     windows = [w for w in gw.getAllWindows() if w.title and w.width > 100 and w.height > 100]
     lowered_parts = [part.lower() for part in title_parts]
-
     for window in windows:
         title = window.title.lower()
         if any(part in title for part in lowered_parts):
             return window
-
     return None
 
 
 def screenshot_window(window) -> np.ndarray:
     image = pyautogui.screenshot(region=(window.left, window.top, window.width, window.height))
     return cv2.cvtColor(np.array(image), cv2.COLOR_RGB2BGR)
-
-
-def load_templates(template_dir: Path) -> dict[str, np.ndarray]:
-    templates: dict[str, np.ndarray] = {}
-    if not template_dir.exists():
-        template_dir.mkdir(parents=True, exist_ok=True)
-        return templates
-
-    for path in template_dir.rglob("*.png"):
-        image = cv2.imread(str(path), cv2.IMREAD_COLOR)
-        if image is None:
-            logging.warning("Could not read template %s", path)
-            continue
-        templates[path.stem] = image
-
-    return templates
-
-
-def locate_template(screen: np.ndarray, template: np.ndarray, name: str, threshold: float) -> Match | None:
-    if template.shape[0] > screen.shape[0] or template.shape[1] > screen.shape[1]:
-        return None
-
-    screen_gray = cv2.cvtColor(screen, cv2.COLOR_BGR2GRAY)
-    template_gray = cv2.cvtColor(template, cv2.COLOR_BGR2GRAY)
-    result = cv2.matchTemplate(screen_gray, template_gray, cv2.TM_CCOEFF_NORMED)
-    _, max_val, _, max_loc = cv2.minMaxLoc(result)
-
-    if max_val < threshold:
-        return None
-
-    x, y = max_loc
-    h, w = template_gray.shape
-    return Match(
-        name=name,
-        score=float(max_val),
-        center_x=x + w // 2,
-        center_y=y + h // 2,
-        rect=(x, y, w, h),
-    )
-
-
-def best_match_for_action(
-    screen: np.ndarray,
-    templates: dict[str, np.ndarray],
-    action: dict[str, Any],
-    threshold: float,
-) -> Match | None:
-    matches: list[Match] = []
-    for template_name in action.get("templates", []):
-        template = templates.get(template_name)
-        if template is None:
-            continue
-        match = locate_template(screen, template, template_name, threshold)
-        if match:
-            matches.append(match)
-
-    if not matches:
-        return None
-
-    return max(matches, key=lambda item: item.score)
 
 
 def click_window_point(window, x: int, y: int, label: str) -> None:
@@ -134,42 +62,15 @@ def click_window_point(window, x: int, y: int, label: str) -> None:
     pyautogui.click(absolute_x, absolute_y)
 
 
-def perform_shop_cycle(window, config: dict[str, Any], templates: dict[str, np.ndarray], threshold: float) -> None:
-    shop = config.get("shop_strategy", {})
-    delay = float(shop.get("delay_between_clicks_seconds", 0.25))
-    clicks_per_slot = int(shop.get("clicks_per_slot", 1))
-
-    for index, slot in enumerate(shop.get("buy_slots") or [], start=1):
-        x, y = int(slot[0]), int(slot[1])
-        for _ in range(clicks_per_slot):
-            click_window_point(window, x, y, f"shop slot {index}")
-            time.sleep(delay)
-
-    reroll = shop.get("reroll_button")
-    if reroll:
-        click_window_point(window, int(reroll[0]), int(reroll[1]), "reroll")
-        time.sleep(delay)
-
-    start_template_name = shop.get("start_after_shop_template")
-    if start_template_name and start_template_name in templates:
-        screen = screenshot_window(window)
-        match = locate_template(screen, templates[start_template_name], start_template_name, threshold)
-        if match:
-            click_window_point(window, match.center_x, match.center_y, start_template_name)
-
-
 class Bot:
     def __init__(self, config: dict[str, Any], print_mouse: bool = False, auto_start: bool = False) -> None:
         self.config = config
         self.print_mouse = print_mouse
         self.running = auto_start
         self.quit_requested = False
-        self.last_action_at: dict[str, float] = {}
-        self.last_seed_click_at: dict[str, float] = {}
-        self.templates = load_templates(ROOT / config.get("template_dir", "templates"))
-        self.baseline = load_baseline()
-        self.learner = AutonomousLearner(ROOT, config)
-        self.playbook = DwarvesPlaybook(config)
+        self.strategy = KnowledgeStrategy(ROOT, config)
+        self.playbook = DwarvesPlaybook(config, self.strategy)
+        self.recorder = ScreenRecorder(ROOT, config)
 
     def install_hotkeys(self) -> None:
         hotkeys = self.config.get("hotkeys", {})
@@ -184,138 +85,28 @@ class Bot:
         self.quit_requested = True
         logging.info("Quit requested")
 
-    def action_ready(self, action: dict[str, Any]) -> bool:
-        name = action["name"]
-        cooldown = float(action.get("cooldown_seconds", 0))
-        return time.monotonic() - self.last_action_at.get(name, 0) >= cooldown
-
-    def mark_action(self, action: dict[str, Any]) -> None:
-        self.last_action_at[action["name"]] = time.monotonic()
-
     def step(self, window) -> bool:
-        threshold = float(self.config.get("match_threshold", 0.87))
         screen = screenshot_window(window)
-        screen_id = self.learner.observe(screen) if self.learner.enabled else ""
+        state = self.playbook.classify(screen)
+        action = self.playbook.choose_action(screen)
+        self.recorder.observe(screen, state.value, action.name if action else None)
 
-        playbook_action = self.playbook.choose_action(screen)
-        if playbook_action:
-            x = int(window.width * playbook_action.x_ratio)
-            y = int(window.height * playbook_action.y_ratio)
-            click_window_point(window, x, y, playbook_action.name)
-            time.sleep(playbook_action.after_delay_seconds)
-            return True
-
-        actions = sorted(self.config.get("actions", []), key=lambda item: int(item.get("priority", 0)), reverse=True)
-
-        for action in actions:
-            if not self.action_ready(action):
-                continue
-
-            match = best_match_for_action(screen, self.templates, action, threshold)
-            if not match:
-                continue
-
-            logging.info(
-                "Matched action=%s template=%s score=%.3f",
-                action["name"],
-                match.name,
-                match.score,
-            )
-
-            click_mode = action.get("click", "best")
-            if click_mode == "shop_slots":
-                perform_shop_cycle(window, self.config, self.templates, threshold)
-            else:
-                click_window_point(window, match.center_x, match.center_y, action["name"])
-
-            self.mark_action(action)
-            time.sleep(float(self.config.get("after_click_delay_seconds", 0.75)))
-            return True
-
-        if self.try_seed_click(window, screen, screen_id):
-            return True
-
-        if self.learner.enabled and self.config.get("autonomous_learning", {}).get("fallback_exploration_enabled", False):
-            candidate = self.learner.choose_candidate(screen, screen_id)
-            if candidate:
-                x, y = candidate.center
-                logging.info(
-                    "Learner exploring screen=%s candidate=(%s,%s,%s,%s) score=%.3f",
-                    screen_id[:8],
-                    candidate.x,
-                    candidate.y,
-                    candidate.w,
-                    candidate.h,
-                    candidate.score,
-                )
-                self.learner.mark_clicked(screen_id, screen, candidate)
-                click_window_point(window, x, y, "learner candidate")
-                time.sleep(float(self.config.get("after_click_delay_seconds", 0.75)))
-                return True
-
-        return False
-
-    def try_seed_click(self, window, screen: np.ndarray, screen_id: str) -> bool:
-        seed_config = self.config.get("seed_clicks", {})
-        if not seed_config.get("enabled", False):
+        if not action:
+            logging.info("No strategy action for state=%s", state.value)
             return False
 
-        if not self.looks_like_main_hall(screen):
-            return False
-
-        cooldown = float(seed_config.get("cooldown_seconds", 8.0))
-        actions = sorted(seed_config.get("actions", []), key=lambda item: int(item.get("priority", 0)), reverse=True)
-        now = time.monotonic()
-
-        for action in actions:
-            name = action["name"]
-            if now - self.last_seed_click_at.get(name, 0) < cooldown:
-                continue
-
-            x = int(window.width * float(action["x_ratio"]))
-            y = int(window.height * float(action["y_ratio"]))
-            logging.info("Seed click %s on likely main hall screen=%s", name, screen_id[:8])
-            click_window_point(window, x, y, name)
-            self.last_seed_click_at[name] = now
-            time.sleep(float(self.config.get("after_click_delay_seconds", 0.75)))
-            return True
-
-        return False
-
-    def looks_like_main_hall(self, screen: np.ndarray) -> bool:
-        height, width = screen.shape[:2]
-        upper = screen[int(height * 0.18) : int(height * 0.52), :]
-        lower = screen[int(height * 0.58) : int(height * 0.90), :]
-        if upper.size == 0 or lower.size == 0:
-            return False
-
-        upper_gray = cv2.cvtColor(upper, cv2.COLOR_BGR2GRAY)
-        lower_gray = cv2.cvtColor(lower, cv2.COLOR_BGR2GRAY)
-        upper_edges = cv2.Canny(upper_gray, 40, 120).mean()
-        lower_edges = cv2.Canny(lower_gray, 40, 120).mean()
-
-        # Main hall has dense card/inventory grid lines in both upper and lower halves.
-        return upper_edges > 12 and lower_edges > 10
+        x = int(window.width * action.x_ratio)
+        y = int(window.height * action.y_ratio)
+        click_window_point(window, x, y, action.name)
+        time.sleep(action.after_delay_seconds)
+        return True
 
     def run(self) -> None:
         pyautogui.FAILSAFE = True
         self.install_hotkeys()
+        self.log_startup()
 
         title_parts = self.config.get("window_title_contains", ["Dwarves"])
-        logging.info("Loaded %s templates: %s", len(self.templates), ", ".join(sorted(self.templates)) or "none")
-        if self.baseline:
-            sources = self.baseline.get("sources", [])
-            set_names = self.baseline.get("item_set_priorities", {}).get("s_tier", [])
-            logging.info("Loaded baseline knowledge from %s sources", len(sources))
-            logging.info("Baseline S-tier set targets: %s", ", ".join(set_names) if set_names else "none")
-        else:
-            logging.info("No baseline knowledge found. Run run_bootstrap_knowledge.bat to seed it.")
-        if self.learner.enabled:
-            logging.info("Autonomous learner enabled. Screenshots/state go to %s", self.learner.data_dir)
-        if self.playbook.enabled:
-            logging.info("State playbook enabled. Free exploration is %s", "enabled" if self.config.get("autonomous_learning", {}).get("fallback_exploration_enabled", False) else "disabled")
-        logging.info("Press %s to start/pause. Press %s to quit.", self.config["hotkeys"]["toggle"], self.config["hotkeys"]["quit"])
-
         while not self.quit_requested:
             window = find_game_window(title_parts)
             if not window:
@@ -329,14 +120,23 @@ class Bot:
 
             if self.running:
                 try:
-                    acted = self.step(window)
-                    if not acted:
-                        logging.debug("No action matched")
+                    self.step(window)
                 except pyautogui.FailSafeException:
                     logging.warning("PyAutoGUI failsafe triggered. Pausing.")
                     self.running = False
 
             time.sleep(float(self.config.get("loop_delay_seconds", 0.35)))
+
+    def log_startup(self) -> None:
+        summary = self.strategy.summary()
+        logging.info("Knowledge sources loaded: %s", summary["sources"])
+        logging.info("Knowledge coverage: %s", summary["source_coverage"])
+        logging.info("S-tier set targets: %s", ", ".join(summary["s_tier_sets"]) or "none")
+        logging.info("Video training samples: %s", summary["video_samples"])
+        logging.info("Video state baseline: %s", summary["video_states"])
+        logging.info("State playbook enabled: %s", self.playbook.enabled)
+        logging.info("Screenshots/timeline go to %s", self.recorder.data_dir)
+        logging.info("Press %s to start/pause. Press %s to quit.", self.config["hotkeys"]["toggle"], self.config["hotkeys"]["quit"])
 
 
 def parse_args() -> argparse.Namespace:
@@ -356,3 +156,4 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+

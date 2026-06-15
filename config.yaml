@@ -5,96 +5,26 @@ window_title_contains:
   - "Loot"
 
 loop_delay_seconds: 0.35
-after_click_delay_seconds: 0.75
-match_threshold: 0.87
-template_dir: "templates"
 log_file: "bot.log"
-
-autonomous_learning:
-  enabled: true
-  fallback_exploration_enabled: false
-  data_dir: "learning_data"
-  screenshot_interval_seconds: 2.5
-  click_result_delay_seconds: 1.0
-  changed_hash_bits: 10
-  changed_mean_absdiff: 6.0
-  candidate_cooldown_seconds: 4.0
-  failed_candidate_cooldown_seconds: 45.0
-  max_candidates_per_screen: 12
-  min_candidate_width: 90
-  min_candidate_height: 40
-  max_candidate_screen_width: 0.65
-  max_candidate_screen_height: 0.22
-  edge_margin: 28
-  ignore_bottom_toolbar: true
-  bottom_toolbar_cutoff: 0.90
-
-seed_clicks:
-  enabled: false
-  cooldown_seconds: 8.0
-  # Window-relative ratios. These are intentionally broad starting points for the
-  # 1920x1080-ish Dwarves UI and scale with the window.
-  actions:
-    - name: "main_bottom_battle_tab"
-      x_ratio: 0.660
-      y_ratio: 0.955
-      priority: 90
-    - name: "main_center_swords"
-      x_ratio: 0.500
-      y_ratio: 0.555
-      priority: 80
-    - name: "right_side_start_panel"
-      x_ratio: 0.890
-      y_ratio: 0.555
-      priority: 70
-
-state_playbook:
-  enabled: true
-  log_state: true
 
 hotkeys:
   toggle: "ctrl+alt+s"
   quit: "ctrl+alt+q"
 
-actions:
-  - name: "retry"
-    templates: ["retry", "defeat"]
-    click: "best"
-    priority: 100
-    cooldown_seconds: 2.0
+screen_recorder:
+  enabled: true
+  data_dir: "learning_data"
+  screenshot_interval_seconds: 3.0
 
-  - name: "confirm"
-    templates: ["confirm", "ok"]
-    click: "best"
-    priority: 90
-    cooldown_seconds: 0.8
+state_playbook:
+  enabled: true
 
-  - name: "claim_reward"
-    templates: ["claim", "continue"]
-    click: "best"
-    priority: 80
-    cooldown_seconds: 1.0
-
-  - name: "shop_cycle"
-    templates: ["shop"]
-    click: "shop_slots"
-    priority: 70
-    cooldown_seconds: 4.0
-
-  - name: "start_fight"
-    templates: ["start", "fight"]
-    click: "best"
-    priority: 60
-    cooldown_seconds: 1.2
-
-shop_strategy:
-  # Coordinates are relative to the game window: x and y from the top-left.
-  # These are placeholders. Use --print-mouse in the bot if you want to tune them.
-  buy_slots:
-    - [520, 620]
-    - [700, 620]
-    - [880, 620]
-  reroll_button: null
-  start_after_shop_template: "fight"
-  clicks_per_slot: 1
-  delay_between_clicks_seconds: 0.25
+strategy:
+  # Until OCR is added, the safest battle-selection rule is to click a visible
+  # battle card and rotate if the screen does not change.
+  battle_card_preference: "center_left_right"
+  priorities:
+    - "advance battle loop"
+    - "avoid destructive actions"
+    - "prefer fights over idle menus"
+    - "use wiki/reddit/video baseline for strategy once screen text is readable"

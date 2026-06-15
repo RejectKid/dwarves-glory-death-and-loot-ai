@@ -9,6 +9,8 @@ from typing import Any
 import cv2
 import numpy as np
 
+from dwarves_autoplayer.strategy import KnowledgeStrategy, StrategyActionSpec
+
 
 class GameState(str, Enum):
     MAIN_HALL = "main_hall"
@@ -29,9 +31,10 @@ class PlaybookAction:
 
 
 class DwarvesPlaybook:
-    def __init__(self, config: dict[str, Any]) -> None:
+    def __init__(self, config: dict[str, Any], strategy: KnowledgeStrategy) -> None:
         self.config = config.get("state_playbook", {})
         self.enabled = bool(self.config.get("enabled", True))
+        self.strategy = strategy
         self.last_action_at: dict[str, float] = {}
         self.last_state: GameState | None = None
         self.state_seen_at = time.monotonic()
@@ -73,53 +76,14 @@ class DwarvesPlaybook:
 
     def _action_for_state(self, screen: np.ndarray, state: GameState) -> PlaybookAction | None:
         state_elapsed = time.monotonic() - self.state_seen_at
-        if state == GameState.MAIN_HALL:
-            return self._rotate(
-                state,
-                [
-                    PlaybookAction("open_battle_select_bottom", 0.660, 0.955, 3.0),
-                    PlaybookAction("open_battle_select_swords", 0.500, 0.555, 4.0),
-                    PlaybookAction("open_battle_select_right", 0.890, 0.555, 4.0),
-                ],
-                force_rotate=state_elapsed > 8.0,
-            )
-
-        if state == GameState.SHOP_MENU:
-            return self._rotate(
-                state,
-                [
-                    PlaybookAction("shop_to_battle_tab", 0.600, 0.955, 3.0),
-                    PlaybookAction("shop_to_battle_right_nav", 0.930, 0.500, 4.0),
-                ],
-                force_rotate=state_elapsed > 6.0,
-            )
-
-        if state == GameState.BATTLE_SELECT:
-            return self._rotate(
-                state,
-                [
-                    PlaybookAction("choose_center_battle", 0.500, 0.285, 2.5, 1.2),
-                    PlaybookAction("choose_left_battle", 0.245, 0.285, 2.5, 1.2),
-                    PlaybookAction("choose_right_battle", 0.755, 0.285, 2.5, 1.2),
-                ],
-                force_rotate=state_elapsed > 8.0,
-            )
-
-        if state == GameState.BATTLE_RUNNING:
-            # Try to keep battle speed high, then wait for report/reward screens.
-            return PlaybookAction("battle_speed_up", 0.945, 0.965, 12.0, 0.35)
-
-        if state == GameState.BATTLE_REPORT:
-            return self._rotate(
-                state,
-                [
-                    PlaybookAction("battle_report_next", 0.925, 0.875, 1.5, 1.0),
-                    PlaybookAction("battle_report_next_low", 0.925, 0.940, 1.5, 1.0),
-                ],
-                force_rotate=state_elapsed > 5.0,
-            )
-
-        return None
+        specs = self.strategy.actions_for_state(state.value, state_elapsed)
+        if not specs:
+            return None
+        return self._rotate(
+            state,
+            [self._to_playbook_action(spec) for spec in specs],
+            force_rotate=state_elapsed > self.strategy.force_rotate_after(state.value),
+        )
 
     def _rotate(self, state: GameState, actions: list[PlaybookAction], force_rotate: bool = False) -> PlaybookAction:
         index = self.state_action_index.get(state, 0)
@@ -128,6 +92,15 @@ class DwarvesPlaybook:
         action = actions[index % len(actions)]
         self.state_action_index[state] = index + 1
         return action
+
+    def _to_playbook_action(self, spec: StrategyActionSpec) -> PlaybookAction:
+        return PlaybookAction(
+            name=spec.name,
+            x_ratio=spec.x_ratio,
+            y_ratio=spec.y_ratio,
+            cooldown_seconds=spec.cooldown_seconds,
+            after_delay_seconds=spec.after_delay_seconds,
+        )
 
     def _looks_like_main_hall(self, screen: np.ndarray) -> bool:
         height, _ = screen.shape[:2]
