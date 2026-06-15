@@ -133,6 +133,13 @@ Before every click, the bot now creates a strategy decision with:
 
 Those decisions are written to `bot.log`, and the runtime timeline includes each action goal.
 
+The bot also pauses before acting. Economy, recruit, equip, forge, storage, and drag actions get longer deliberation time than battle/report actions. Tune this in `config.yaml` under:
+
+```yaml
+deliberation:
+tooltip_reader:
+```
+
 The bot also maintains a lightweight memory file:
 
 ```text

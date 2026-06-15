@@ -119,6 +119,7 @@ class Bot:
             return False
 
         self.log_decision(state.value, action)
+        self.deliberate_before_action(state.value, action)
         x = int(window.width * action.x_ratio)
         y = int(window.height * action.y_ratio)
         tooltip = self.tooltip_reader.read_after_hover(window, x, y, action.name) if self.strategy.should_probe_tooltip(action.name) else None
@@ -190,6 +191,24 @@ class Bot:
             logging.info("Decision risks: %s", " | ".join(action.risks))
         if action.source_basis:
             logging.info("Decision source basis: %s", " | ".join(action.source_basis))
+
+    def deliberate_before_action(self, state: str, action) -> None:
+        config = self.config.get("deliberation", {})
+        if not config.get("enabled", True):
+            return
+
+        if action.action_type == "drag" or action.name.startswith(("recruit_", "loot_", "forge_", "storage_", "tavern_", "equip_")):
+            delay = float(config.get("risky_action_seconds", 1.6))
+        elif action.name.startswith(("nav_recruit", "nav_loot", "nav_forge", "nav_storage", "nav_tavern", "nav_main_hall")):
+            delay = float(config.get("economy_action_seconds", 1.2))
+        elif state in {"battle_select", "battle_running", "battle_report"}:
+            delay = float(config.get("battle_action_seconds", 0.35))
+        else:
+            delay = float(config.get("default_seconds", 0.6))
+
+        if delay > 0:
+            logging.info("Deliberating %.2fs before action=%s", delay, action.name)
+            time.sleep(delay)
 
 
 def parse_args() -> argparse.Namespace:

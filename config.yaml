@@ -7,6 +7,13 @@ window_title_contains:
 loop_delay_seconds: 0.35
 log_file: "bot.log"
 
+deliberation:
+  enabled: true
+  default_seconds: 0.6
+  risky_action_seconds: 1.6
+  economy_action_seconds: 1.2
+  battle_action_seconds: 0.35
+
 hotkeys:
   toggle: "ctrl+alt+s"
   quit: "ctrl+alt+q"
@@ -19,7 +26,7 @@ screen_recorder:
 tooltip_reader:
   enabled: true
   data_dir: "learning_data/tooltips"
-  hover_seconds: 0.45
+  hover_seconds: 0.9
 
 state_playbook:
   enabled: true
