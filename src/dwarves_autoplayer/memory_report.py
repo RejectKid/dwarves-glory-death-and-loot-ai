@@ -24,6 +24,14 @@ def main() -> None:
     for item in planner.gear_targets(memory):
         print(f"  - {item}")
 
+    print("relic_targets:")
+    for item in planner.relic_targets(memory):
+        print(f"  - {item}")
+
+    print(f"relics_seen: {len(memory.relics_seen)}")
+    for item in memory.relics_seen[-10:]:
+        print(f"  - {item.name or '(unknown relic)'} {item.effect_text[:120]}")
+
     print("recent_tooltips:")
     for item in memory.tooltip_text_seen[-10:]:
         print(f"  - {item}")

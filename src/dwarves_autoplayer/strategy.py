@@ -126,6 +126,8 @@ class KnowledgeStrategy:
     def tooltip_matches_priorities(self, text: str) -> list[str]:
         lowered = text.lower()
         matches: list[str] = []
+        if any(word in lowered for word in ("relic", "artifact", "artifacts", "trinket")):
+            matches.append("relic/artifact candidate")
         sets = self.baseline.get("item_set_priorities", {})
         for set_name in sets.get("s_tier", []) + sets.get("a_tier", []):
             if set_name.lower() in lowered:
@@ -168,11 +170,11 @@ class KnowledgeStrategy:
         if action_name.startswith("nav_recruit") or action_name.startswith("recruit_"):
             return "increase roster size and role coverage"
         if action_name.startswith("nav_loot") or action_name.startswith("loot_"):
-            return "buy or equip gear that improves profession/build power"
+            return "buy or equip gear/relics that improve profession/build power"
         if action_name.startswith("nav_forge") or action_name.startswith("forge_"):
             return "upgrade useful gear before pushing harder fights"
         if action_name.startswith("nav_storage") or action_name.startswith("storage_"):
-            return "equip stored gear and preserve set-building options"
+            return "equip stored gear/relics and preserve set-building options"
         if action_name.startswith("nav_tavern") or action_name.startswith("tavern_"):
             return "check long-term run/economy upgrades"
         if "battle" in action_name or state == "battle_select":
@@ -192,7 +194,7 @@ class KnowledgeStrategy:
         if action_name.startswith(("nav_recruit", "recruit_")):
             return "Strategy baseline says early runs need enough dwarves and role coverage before loot optimization."
         if action_name.startswith(("nav_loot", "loot_", "nav_storage", "storage_", "nav_forge", "forge_")):
-            return "Strategy baseline prioritizes buy/equip/upgrade actions and set-piece preservation before harder fights; tooltips are probed before risky gear clicks."
+            return "Strategy baseline prioritizes buy/equip/upgrade actions, relic/artifact slots, and set-piece preservation before harder fights; tooltips are probed before risky gear clicks."
         if state == "battle_running":
             return "Battle is automated by the game; keeping speed high improves loop throughput while waiting for report/reward screens."
         if state == "battle_report":

@@ -128,7 +128,7 @@ The bot also maintains a lightweight memory file:
 learning_data\game_memory.json
 ```
 
-Today that memory provides the structure for roster, unit roles, gear seen, equipped sets, and chosen build archetype. Until OCR is added, those fields are mostly scaffolding and broad guidance; once OCR can read unit/item text, this is where the bot will learn which dwarves, set pieces, and upgrades are actually working.
+Today that memory provides the structure for roster, unit roles, gear seen, relics/artifacts seen, equipped sets, and chosen build archetype. Each dwarf can eventually be modeled with gear plus two relic/artifact slots. Until OCR is added, those fields are mostly scaffolding and broad guidance; once OCR can read unit/item text, this is where the bot will learn which dwarves, set pieces, relics, and upgrades are actually working.
 
 Inspect memory and current build targets with:
 

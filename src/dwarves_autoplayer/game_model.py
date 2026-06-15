@@ -26,11 +26,20 @@ class GearItem:
 
 
 @dataclass
+class RelicItem:
+    name: str = ""
+    role_hint: str = "unknown"
+    effect_text: str = ""
+    score: float = 0.0
+
+
+@dataclass
 class RunMemory:
     victories: int = 0
     gold: int = 0
     units: list[Unit] = field(default_factory=list)
     gear_seen: list[GearItem] = field(default_factory=list)
+    relics_seen: list[RelicItem] = field(default_factory=list)
     tooltip_text_seen: list[str] = field(default_factory=list)
     chosen_build: str = "balanced_core"
     updated_at: float = field(default_factory=time.time)
@@ -59,6 +68,7 @@ class GameMemory:
                 gold=int(data.get("gold", 0)),
                 units=[Unit(**item) for item in data.get("units", [])],
                 gear_seen=[GearItem(**item) for item in data.get("gear_seen", [])],
+                relics_seen=[RelicItem(**item) for item in data.get("relics_seen", [])],
                 tooltip_text_seen=[str(item) for item in data.get("tooltip_text_seen", [])],
                 chosen_build=str(data.get("chosen_build", "balanced_core")),
                 updated_at=float(data.get("updated_at", time.time())),
@@ -76,8 +86,20 @@ class GameMemory:
         if cleaned not in self.memory.tooltip_text_seen:
             self.memory.tooltip_text_seen.append(cleaned)
             self.memory.tooltip_text_seen = self.memory.tooltip_text_seen[-200:]
+        if self._looks_like_relic(cleaned):
+            self._note_relic(cleaned)
         self.memory.updated_at = time.time()
         self._save()
+
+    def _looks_like_relic(self, text: str) -> bool:
+        lowered = text.lower()
+        return any(word in lowered for word in ("relic", "artifact", "artifacts", "trinket"))
+
+    def _note_relic(self, text: str) -> None:
+        if any(item.effect_text == text for item in self.memory.relics_seen):
+            return
+        self.memory.relics_seen.append(RelicItem(name="", effect_text=text))
+        self.memory.relics_seen = self.memory.relics_seen[-100:]
 
 
 class BuildPlanner:
@@ -108,6 +130,14 @@ class BuildPlanner:
             return role_targets.get("mage", [])
         return sets.get("s_tier", [])[:6]
 
+    def relic_targets(self, memory: RunMemory) -> list[str]:
+        return [
+            "damage scaling relics for carry units",
+            "health/armor/block relics for frontline units",
+            "healing, mana, cooldown, or support relics for sustain units",
+            "set-synergy relics or artifacts that reinforce the chosen build",
+        ]
+
     def action_guidance(self, action_name: str, memory: RunMemory) -> list[str]:
         if action_name.startswith(("nav_recruit", "recruit_")):
             return self.roster_needs(memory)
@@ -115,12 +145,14 @@ class BuildPlanner:
             targets = ", ".join(self.gear_targets(memory))
             return [
                 "equip set pieces on units that match their role",
+                "fill both relic/artifact slots on each core dwarf when useful relics are visible",
                 f"prefer set targets when visible: {targets}",
                 "avoid breaking useful partial sets unless replacing with a stronger role fit",
             ]
         if action_name.startswith(("nav_forge", "forge_")):
             return [
                 "upgrade gear already equipped on core frontline, healer, or carry units",
+                "upgrade or preserve impactful relic/artifact bonuses when available",
                 "prefer set pieces over isolated filler gear",
             ]
         return []
