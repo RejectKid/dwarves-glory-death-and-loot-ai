@@ -7,6 +7,7 @@ from typing import Any
 import yaml
 
 from dwarves_autoplayer.baseline import load_baseline
+from dwarves_autoplayer.game_model import BuildPlanner, GameMemory
 
 
 @dataclass(frozen=True)
@@ -35,6 +36,8 @@ class KnowledgeStrategy:
         self.config = config.get("strategy", {})
         self.baseline = load_baseline()
         self.video_baseline = self._load_yaml(root / "knowledge" / "video_baseline.yaml")
+        self.memory = GameMemory(root)
+        self.planner = BuildPlanner(self.baseline)
         self.macro_enabled = bool(self.config.get("economy_cycle_enabled", True))
         self.macro_index = 0
         self.macro_sequence = self._build_macro_sequence()
@@ -49,6 +52,8 @@ class KnowledgeStrategy:
             "s_tier_sets": sets.get("s_tier", []),
             "video_samples": self.video_baseline.get("total_samples", 0),
             "video_states": video_counts,
+            "chosen_build": self.memory.snapshot().chosen_build,
+            "roster_size": len(self.memory.snapshot().units),
         }
 
     def actions_for_state(self, state: str, state_elapsed: float) -> list[StrategyActionSpec]:
@@ -87,6 +92,7 @@ class KnowledgeStrategy:
         )
 
     def note_action_chosen(self, action_name: str, state: str) -> None:
+        self.memory.note_goal(self._goal_for_action(action_name, state))
         if not self.macro_enabled:
             return
         current = self.current_macro_action()
@@ -170,6 +176,9 @@ class KnowledgeStrategy:
         professions = self.baseline.get("professions", {})
         strategy = self.baseline.get("strategy_model", {})
         priorities = []
+
+        memory = self.memory.snapshot()
+        priorities.extend(self.planner.action_guidance(action_name, memory))
 
         if action_name.startswith(("nav_recruit", "recruit_")):
             priorities.extend(professions.get("baseline_priority", [])[:3])

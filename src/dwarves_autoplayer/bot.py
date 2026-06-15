@@ -133,6 +133,8 @@ class Bot:
         logging.info("Knowledge sources loaded: %s", summary["sources"])
         logging.info("Knowledge coverage: %s", summary["source_coverage"])
         logging.info("S-tier set targets: %s", ", ".join(summary["s_tier_sets"]) or "none")
+        logging.info("Chosen build archetype: %s", summary["chosen_build"])
+        logging.info("Known roster size: %s", summary["roster_size"])
         logging.info("Video training samples: %s", summary["video_samples"])
         logging.info("Video state baseline: %s", summary["video_states"])
         logging.info("State playbook enabled: %s", self.playbook.enabled)

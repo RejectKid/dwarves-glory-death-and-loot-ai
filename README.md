@@ -117,9 +117,24 @@ Before every click, the bot now creates a strategy decision with:
 - rationale
 - risks
 - build priorities
+- roster and gear/set guidance
 - source basis from wiki/guide/Reddit/Steam/video training
 
 Those decisions are written to `bot.log`, and the runtime timeline includes each action goal.
+
+The bot also maintains a lightweight memory file:
+
+```text
+learning_data\game_memory.json
+```
+
+Today that memory provides the structure for roster, unit roles, gear seen, equipped sets, and chosen build archetype. Until OCR is added, those fields are mostly scaffolding and broad guidance; once OCR can read unit/item text, this is where the bot will learn which dwarves, set pieces, and upgrades are actually working.
+
+Inspect memory and current build targets with:
+
+```powershell
+.\memory_report.bat
+```
 
 ## Diagnose
 

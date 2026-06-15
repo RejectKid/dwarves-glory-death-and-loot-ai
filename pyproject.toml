@@ -26,6 +26,7 @@ dwarves-bootstrap-knowledge = "dwarves_autoplayer.bootstrap_knowledge:main"
 dwarves-diagnose = "dwarves_autoplayer.diagnose:main"
 dwarves-train-video = "dwarves_autoplayer.train_from_video:main"
 dwarves-knowledge-report = "dwarves_autoplayer.knowledge_report:main"
+dwarves-memory-report = "dwarves_autoplayer.memory_report:main"
 
 [tool.setuptools]
 package-dir = {"" = "src"}
