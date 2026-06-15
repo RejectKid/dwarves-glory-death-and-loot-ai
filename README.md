@@ -15,7 +15,7 @@ This is for personal single-player automation, accessibility, and experimentatio
 ## Setup
 
 1. Close the game or leave it at the main menu.
-2. Run:
+2. Run setup. This creates a local `.venv` inside the project and installs the bot there:
 
 ```powershell
 cd "E:\Projects\dwarves-autoplayer"

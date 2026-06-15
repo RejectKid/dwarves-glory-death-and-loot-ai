@@ -2,11 +2,11 @@
 setlocal
 cd /d "%~dp0"
 
-set CODEX_PY=C:\Users\Rejec\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\python.exe
-if exist "%CODEX_PY%" (
-  set PYTHON_EXE=%CODEX_PY%
-) else (
-  set PYTHON_EXE=python
+set PYTHON_EXE=%CD%\.venv\Scripts\python.exe
+if not exist "%PYTHON_EXE%" (
+  echo Missing .venv. Run setup.bat first.
+  pause
+  exit /b 1
 )
 
 "%PYTHON_EXE%" -m dwarves_autoplayer.capture_template

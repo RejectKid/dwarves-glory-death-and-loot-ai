@@ -2,19 +2,32 @@
 setlocal
 cd /d "%~dp0"
 
-set CODEX_PY=C:\Users\Rejec\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\python.exe
-if exist "%CODEX_PY%" (
-  set PYTHON_EXE=%CODEX_PY%
-) else (
-  set PYTHON_EXE=python
+set VENV_PY=%CD%\.venv\Scripts\python.exe
+
+if not exist "%VENV_PY%" (
+  echo Creating local virtual environment in .venv
+  py -3.13 -m venv .venv
+  if errorlevel 1 (
+    echo Python 3.13 was not available through the py launcher. Trying default python.
+    python -m venv .venv
+  )
 )
 
-echo Using Python: %PYTHON_EXE%
-"%PYTHON_EXE%" -m pip install --upgrade pip
-"%PYTHON_EXE%" -m pip install -e .
+if not exist "%VENV_PY%" (
+  echo.
+  echo Setup failed: could not create .venv.
+  echo Install Python 3.13 or 3.12, then rerun setup.
+  pause
+  exit /b 1
+)
+
+echo Using Python: %VENV_PY%
+"%VENV_PY%" -m pip install --upgrade pip
+"%VENV_PY%" -m pip install -e .
 if errorlevel 1 (
   echo.
-  echo Setup failed. If you are using Python 3.14, install Python 3.12 and rerun setup.
+  echo Setup failed while installing dependencies.
+  echo Try deleting .venv and rerunning setup, or install Python 3.13/3.12.
   pause
   exit /b 1
 )
