@@ -41,6 +41,39 @@ Process all local tutorial/playthrough videos in `learning_data\videos\`:
 .\train_tutorial_video.bat
 ```
 
+The repository does not include the large video files. For the current checked-in video baseline, these YouTube videos were saved locally before training:
+
+- [Dwarves video 1](https://www.youtube.com/watch?v=dKzTFycfKw8)
+- [Dwarves video 2](https://www.youtube.com/watch?v=hLhocQB0wNs)
+- [Dwarves video 3](https://www.youtube.com/watch?v=HpNRjpKWgyM)
+
+Save downloaded/provided `.mp4` files here:
+
+```text
+learning_data\videos\
+```
+
+Example local filenames used during training:
+
+```text
+Tips.mp4
+tutorial1.mp4
+tutorial2.mp4
+```
+
+Video training writes:
+
+- `learning_data\video_training\<video-name>\timeline.csv`
+- `learning_data\video_training\<video-name>\summary.json`
+- `knowledge\video_baseline.yaml`
+
+After cloning the repo, rerun knowledge and video training after adding local videos:
+
+```powershell
+.\run_bootstrap_knowledge.bat
+.\train_tutorial_video.bat
+```
+
 ## Run
 
 ```powershell
@@ -90,4 +123,3 @@ learning_data\runtime_timeline.csv
 - `src\dwarves_autoplayer\train_from_video.py`: offline tutorial video sampler
 - `knowledge\baseline.yaml`: generated strategy/source baseline
 - `knowledge\video_baseline.yaml`: generated video-state baseline
-
