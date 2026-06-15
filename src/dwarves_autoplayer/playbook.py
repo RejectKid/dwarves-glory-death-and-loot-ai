@@ -28,6 +28,9 @@ class PlaybookAction:
     y_ratio: float
     cooldown_seconds: float
     after_delay_seconds: float = 0.75
+    action_type: str = "click"
+    target_x_ratio: float | None = None
+    target_y_ratio: float | None = None
     goal: str = ""
     rationale: str = ""
     risks: tuple[str, ...] = ()
@@ -108,6 +111,9 @@ class DwarvesPlaybook:
             y_ratio=spec.y_ratio,
             cooldown_seconds=spec.cooldown_seconds,
             after_delay_seconds=spec.after_delay_seconds,
+            action_type=spec.action_type,
+            target_x_ratio=spec.target_x_ratio,
+            target_y_ratio=spec.target_y_ratio,
             goal=decision.goal,
             rationale=decision.rationale,
             risks=tuple(decision.risks),

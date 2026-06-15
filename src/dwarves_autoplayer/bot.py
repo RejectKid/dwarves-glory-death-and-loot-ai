@@ -63,6 +63,27 @@ def click_window_point(window, x: int, y: int, label: str) -> None:
     pyautogui.click(absolute_x, absolute_y)
 
 
+def drag_window_point(window, x: int, y: int, target_x: int, target_y: int, label: str) -> None:
+    start_x = window.left + x
+    start_y = window.top + y
+    end_x = window.left + target_x
+    end_y = window.top + target_y
+    logging.info(
+        "Drag %s from window=(%s,%s), screen=(%s,%s) to window=(%s,%s), screen=(%s,%s)",
+        label,
+        x,
+        y,
+        start_x,
+        start_y,
+        target_x,
+        target_y,
+        end_x,
+        end_y,
+    )
+    pyautogui.moveTo(start_x, start_y)
+    pyautogui.dragTo(end_x, end_y, duration=0.35, button="left")
+
+
 class Bot:
     def __init__(self, config: dict[str, Any], print_mouse: bool = False, auto_start: bool = False) -> None:
         self.config = config
@@ -109,7 +130,12 @@ class Bot:
             if self.strategy.should_skip_for_tooltip(action.name, tooltip.text):
                 logging.info("Skipping action=%s after tooltip risk check", action.name)
                 return True
-        click_window_point(window, x, y, action.name)
+        if action.action_type == "drag" and action.target_x_ratio is not None and action.target_y_ratio is not None:
+            target_x = int(window.width * action.target_x_ratio)
+            target_y = int(window.height * action.target_y_ratio)
+            drag_window_point(window, x, y, target_x, target_y, action.name)
+        else:
+            click_window_point(window, x, y, action.name)
         time.sleep(action.after_delay_seconds)
         return True
 

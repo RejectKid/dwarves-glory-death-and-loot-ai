@@ -38,6 +38,19 @@ strategy:
     loot_8: 0.608
     battle_9: 0.660
     raid_0: 0.714
+  equip_targets:
+    front_dwarf: [0.840, 0.360]
+    damage_dwarf: [0.935, 0.360]
+  inventory_slots:
+    row1:
+      - [0.085, 0.675]
+      - [0.155, 0.675]
+      - [0.245, 0.675]
+      - [0.335, 0.675]
+      - [0.425, 0.675]
+      - [0.515, 0.675]
+      - [0.605, 0.675]
+      - [0.695, 0.675]
   priorities:
     - "advance battle loop"
     - "recruit additional dwarves"

@@ -17,6 +17,9 @@ class StrategyActionSpec:
     y_ratio: float
     cooldown_seconds: float
     after_delay_seconds: float = 0.75
+    action_type: str = "click"
+    target_x_ratio: float | None = None
+    target_y_ratio: float | None = None
 
 
 @dataclass(frozen=True)
@@ -102,6 +105,7 @@ class KnowledgeStrategy:
     def should_probe_tooltip(self, action_name: str) -> bool:
         return action_name.startswith(
             (
+                "equip_",
                 "recruit_",
                 "loot_",
                 "forge_",
@@ -175,6 +179,8 @@ class KnowledgeStrategy:
             return "upgrade useful gear before pushing harder fights"
         if action_name.startswith("nav_storage") or action_name.startswith("storage_"):
             return "equip stored gear/relics and preserve set-building options"
+        if action_name.startswith("equip_"):
+            return "equip gear or relics onto dwarves to activate stats, roles, and set bonuses"
         if action_name.startswith("nav_tavern") or action_name.startswith("tavern_"):
             return "check long-term run/economy upgrades"
         if "battle" in action_name or state == "battle_select":
@@ -193,7 +199,7 @@ class KnowledgeStrategy:
             return "Video baseline shows battle cards as the normal transition into combat; baseline policy favors battle-loop progress when no OCR choice is available."
         if action_name.startswith(("nav_recruit", "recruit_")):
             return "Strategy baseline says early runs need enough dwarves and role coverage before loot optimization."
-        if action_name.startswith(("nav_loot", "loot_", "nav_storage", "storage_", "nav_forge", "forge_")):
+        if action_name.startswith(("nav_loot", "loot_", "nav_storage", "storage_", "nav_forge", "forge_", "equip_")):
             return "Strategy baseline prioritizes buy/equip/upgrade actions, relic/artifact slots, and set-piece preservation before harder fights; tooltips are probed before risky gear clicks."
         if state == "battle_running":
             return "Battle is automated by the game; keeping speed high improves loop throughput while waiting for report/reward screens."
@@ -205,7 +211,7 @@ class KnowledgeStrategy:
 
     def _risks_for_action(self, action_name: str, state: str) -> list[str]:
         risks = ["no OCR yet, so exact item/unit quality cannot be verified"]
-        if action_name.startswith(("loot_", "forge_", "storage_", "recruit_", "tavern_")):
+        if action_name.startswith(("loot_", "forge_", "storage_", "recruit_", "tavern_", "equip_")):
             risks.append("broad click may select a suboptimal item/unit or miss the intended button if OCR/tooltip text is unavailable")
         if action_name.startswith("nav_raid"):
             risks.append("raid content may be harder than regular battles")
@@ -224,7 +230,7 @@ class KnowledgeStrategy:
 
         if action_name.startswith(("nav_recruit", "recruit_")):
             priorities.extend(professions.get("baseline_priority", [])[:3])
-        elif action_name.startswith(("nav_loot", "loot_", "nav_forge", "forge_", "nav_storage", "storage_")):
+        elif action_name.startswith(("nav_loot", "loot_", "nav_forge", "forge_", "nav_storage", "storage_", "equip_")):
             priorities.extend(sets.get("notes", [])[:2])
             priorities.append("target S-tier sets: " + ", ".join(sets.get("s_tier", [])[:6]))
         elif state in {"battle_select", "battle_running", "battle_report"}:
@@ -270,6 +276,8 @@ class KnowledgeStrategy:
             StrategyActionSpec("nav_storage", nav["storage"], 0.955, 1.0, 0.8),
             StrategyActionSpec("storage_try_equip_left", 0.350, 0.500, 1.0, 0.5),
             StrategyActionSpec("storage_try_equip_center", 0.500, 0.500, 1.0, 0.5),
+            StrategyActionSpec("nav_main_hall_for_equipping", nav["main_hall"], 0.955, 1.0, 0.8),
+            *self._equip_drag_actions(),
             StrategyActionSpec("nav_tavern", nav["tavern"], 0.955, 1.0, 0.8),
             StrategyActionSpec("tavern_try_middle", 0.500, 0.500, 1.0, 0.5),
             StrategyActionSpec("nav_main_hall", nav["main_hall"], 0.955, 1.0, 0.8),
@@ -278,6 +286,29 @@ class KnowledgeStrategy:
             StrategyActionSpec("nav_raid_probe", nav["raid"], 0.955, 1.0, 0.8),
             StrategyActionSpec("nav_battle_again", nav["battle"], 0.955, 1.0, 0.8),
         ]
+
+    def _equip_drag_actions(self) -> list[StrategyActionSpec]:
+        equip_targets = self.config.get("equip_targets", {})
+        inventory_slots = self.config.get("inventory_slots", {}).get("row1", [])
+        front = equip_targets.get("front_dwarf", [0.840, 0.360])
+        damage = equip_targets.get("damage_dwarf", [0.935, 0.360])
+        actions: list[StrategyActionSpec] = []
+        for index, slot in enumerate(inventory_slots[:8], start=1):
+            target = front if index % 2 else damage
+            target_name = "front_dwarf" if index % 2 else "damage_dwarf"
+            actions.append(
+                StrategyActionSpec(
+                    f"equip_inventory_slot_{index}_to_{target_name}",
+                    float(slot[0]),
+                    float(slot[1]),
+                    1.0,
+                    0.6,
+                    "drag",
+                    float(target[0]),
+                    float(target[1]),
+                )
+            )
+        return actions
 
     def _load_yaml(self, path: Path) -> dict[str, Any]:
         if not path.exists():

@@ -109,6 +109,8 @@ It also runs an economy cycle through the bottom hotbar so the run does not only
 
 The menu positions are ratios in `config.yaml` under `strategy.bottom_menu`. The first version uses broad, safe clicks in those menus because OCR is not installed yet; the next upgrade should read menu text and item/unit names before buying or upgrading.
 
+Gear/relic equipping is part of the economy cycle now. After visiting storage/loot, the bot goes to `6` Main Hall and attempts drag actions from visible inventory slots onto dwarf cards. Before each drag, it hovers the source slot and captures/reads the tooltip when OCR is available.
+
 The knowledge baseline currently informs the bot at the policy level: favor battle-loop progress, avoid destructive menus, keep fights moving, and treat shopping/build strategy as a next OCR-driven upgrade. The bot logs how many sources and video samples it loaded at startup.
 
 Before every click, the bot now creates a strategy decision with:
