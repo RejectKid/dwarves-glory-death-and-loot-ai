@@ -25,6 +25,7 @@ dwarves-bot = "dwarves_autoplayer.bot:main"
 dwarves-capture-template = "dwarves_autoplayer.capture_template:main"
 dwarves-bootstrap-knowledge = "dwarves_autoplayer.bootstrap_knowledge:main"
 dwarves-diagnose = "dwarves_autoplayer.diagnose:main"
+dwarves-train-video = "dwarves_autoplayer.train_from_video:main"
 
 [tool.setuptools]
 package-dir = {"" = "src"}

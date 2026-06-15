@@ -12,6 +12,7 @@ import numpy as np
 
 class GameState(str, Enum):
     MAIN_HALL = "main_hall"
+    SHOP_MENU = "shop_menu"
     BATTLE_SELECT = "battle_select"
     BATTLE_RUNNING = "battle_running"
     BATTLE_REPORT = "battle_report"
@@ -34,6 +35,7 @@ class DwarvesPlaybook:
         self.last_action_at: dict[str, float] = {}
         self.last_state: GameState | None = None
         self.state_seen_at = time.monotonic()
+        self.state_action_index: dict[GameState, int] = {}
 
     def classify(self, screen: np.ndarray) -> GameState:
         if self._looks_like_battle_report(screen):
@@ -42,6 +44,8 @@ class DwarvesPlaybook:
             return GameState.BATTLE_SELECT
         if self._looks_like_battle_running(screen):
             return GameState.BATTLE_RUNNING
+        if self._looks_like_shop_menu(screen):
+            return GameState.SHOP_MENU
         if self._looks_like_main_hall(screen):
             return GameState.MAIN_HALL
         return GameState.UNKNOWN
@@ -68,22 +72,62 @@ class DwarvesPlaybook:
         return action
 
     def _action_for_state(self, screen: np.ndarray, state: GameState) -> PlaybookAction | None:
+        state_elapsed = time.monotonic() - self.state_seen_at
         if state == GameState.MAIN_HALL:
-            return PlaybookAction("open_battle_select", 0.660, 0.955, 3.0)
+            return self._rotate(
+                state,
+                [
+                    PlaybookAction("open_battle_select_bottom", 0.660, 0.955, 3.0),
+                    PlaybookAction("open_battle_select_swords", 0.500, 0.555, 4.0),
+                    PlaybookAction("open_battle_select_right", 0.890, 0.555, 4.0),
+                ],
+                force_rotate=state_elapsed > 8.0,
+            )
+
+        if state == GameState.SHOP_MENU:
+            return self._rotate(
+                state,
+                [
+                    PlaybookAction("shop_to_battle_tab", 0.600, 0.955, 3.0),
+                    PlaybookAction("shop_to_battle_right_nav", 0.930, 0.500, 4.0),
+                ],
+                force_rotate=state_elapsed > 6.0,
+            )
 
         if state == GameState.BATTLE_SELECT:
-            # Pick the center card. It is less likely to hit side UI and all three visible cards
-            # are usually equivalent early on. Later this can score bounty/enemy composition.
-            return PlaybookAction("choose_center_battle", 0.500, 0.285, 2.5, 1.2)
+            return self._rotate(
+                state,
+                [
+                    PlaybookAction("choose_center_battle", 0.500, 0.285, 2.5, 1.2),
+                    PlaybookAction("choose_left_battle", 0.245, 0.285, 2.5, 1.2),
+                    PlaybookAction("choose_right_battle", 0.755, 0.285, 2.5, 1.2),
+                ],
+                force_rotate=state_elapsed > 8.0,
+            )
 
         if state == GameState.BATTLE_RUNNING:
             # Try to keep battle speed high, then wait for report/reward screens.
             return PlaybookAction("battle_speed_up", 0.945, 0.965, 12.0, 0.35)
 
         if state == GameState.BATTLE_REPORT:
-            return PlaybookAction("battle_report_next", 0.925, 0.875, 1.5, 1.0)
+            return self._rotate(
+                state,
+                [
+                    PlaybookAction("battle_report_next", 0.925, 0.875, 1.5, 1.0),
+                    PlaybookAction("battle_report_next_low", 0.925, 0.940, 1.5, 1.0),
+                ],
+                force_rotate=state_elapsed > 5.0,
+            )
 
         return None
+
+    def _rotate(self, state: GameState, actions: list[PlaybookAction], force_rotate: bool = False) -> PlaybookAction:
+        index = self.state_action_index.get(state, 0)
+        if force_rotate:
+            index += 1
+        action = actions[index % len(actions)]
+        self.state_action_index[state] = index + 1
+        return action
 
     def _looks_like_main_hall(self, screen: np.ndarray) -> bool:
         height, _ = screen.shape[:2]
@@ -105,7 +149,20 @@ class DwarvesPlaybook:
         gold = self._color_ratio(middle, lower_hsv=(15, 80, 90), upper_hsv=(45, 255, 255))
         top_blue_gray = self._color_ratio(top, lower_hsv=(90, 20, 50), upper_hsv=(115, 160, 210))
         card_edges = self._edge_mean(middle)
-        return top_blue_gray > 0.35 and red_header > 0.055 and gold > 0.030 and card_edges > 11
+        normal_cards = top_blue_gray > 0.35 and red_header > 0.055 and gold > 0.030 and card_edges > 11
+        tooltip_cards = top_blue_gray > 0.35 and red_header > 0.008 and gold > 0.080 and card_edges > 20
+        return normal_cards or tooltip_cards
+
+    def _looks_like_shop_menu(self, screen: np.ndarray) -> bool:
+        height, width = screen.shape[:2]
+        top = screen[int(height * 0.05) : int(height * 0.20), int(width * 0.25) : int(width * 0.75)]
+        middle = screen[int(height * 0.22) : int(height * 0.86), int(width * 0.08) : int(width * 0.92)]
+        bottom = screen[int(height * 0.88) :, :]
+        top_blue_gray = self._color_ratio(top, lower_hsv=(90, 20, 50), upper_hsv=(115, 160, 210))
+        mid_edges = self._edge_mean(middle)
+        mid_gold = self._color_ratio(middle, lower_hsv=(15, 80, 90), upper_hsv=(45, 255, 255))
+        bottom_gold = self._color_ratio(bottom, lower_hsv=(15, 80, 90), upper_hsv=(45, 255, 255))
+        return top_blue_gray > 0.45 and mid_edges < 10.0 and mid_gold < 0.025 and bottom_gold > 0.015
 
     def _looks_like_battle_running(self, screen: np.ndarray) -> bool:
         height, width = screen.shape[:2]

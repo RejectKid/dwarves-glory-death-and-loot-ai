@@ -1,0 +1,37 @@
+video: learning_data\videos\tutorial1.mp4
+fps: 60.0
+frame_count: 226876
+duration_seconds: 3781.266666666667
+interval_seconds: 5.0
+samples: 757
+state_counts:
+  main_hall: 461
+  battle_report: 16
+  battle_select: 85
+  battle_running: 96
+  shop_menu: 4
+  unknown: 95
+transitions:
+  none->main_hall: 1
+  main_hall->main_hall: 377
+  main_hall->battle_report: 4
+  battle_report->battle_report: 12
+  battle_report->main_hall: 2
+  main_hall->battle_select: 41
+  battle_select->main_hall: 29
+  battle_select->battle_select: 40
+  battle_select->battle_running: 13
+  battle_running->battle_running: 79
+  battle_running->main_hall: 15
+  main_hall->battle_running: 3
+  battle_running->shop_menu: 2
+  shop_menu->main_hall: 2
+  shop_menu->battle_select: 2
+  main_hall->unknown: 34
+  unknown->main_hall: 35
+  battle_select->unknown: 3
+  unknown->unknown: 56
+  main_hall->shop_menu: 2
+  unknown->battle_running: 1
+  unknown->battle_select: 2
+  battle_report->unknown: 2

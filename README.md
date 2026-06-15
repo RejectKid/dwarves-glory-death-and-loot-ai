@@ -115,6 +115,7 @@ Edit `config.yaml` to change priorities, click slots, delays, and confidence thr
 Autonomous mode now uses a deterministic state playbook first. It identifies the current screen and uses a specific action plan:
 
 - `main_hall`: open battle selection
+- `shop_menu`: return to the battle tab/selection loop
 - `battle_select`: choose a visible battle card
 - `battle_running`: wait and keep battle speed high
 - `battle_report`: advance back toward the hall/rewards loop
@@ -135,10 +136,25 @@ If the bot stalls, run:
 
 It prints the detected state and planned click for the latest captured screenshot.
 
+## Tutorial Video Training
+
+Put tutorial or playthrough videos in `learning_data\videos\`. To process `tutorial1.mp4`:
+
+```powershell
+.\train_tutorial_video.bat
+```
+
+This samples the video, classifies frames with the state playbook, saves representative frames, and writes:
+
+- `learning_data\video_training\tutorial1\timeline.csv`
+- `learning_data\video_training\tutorial1\summary.json`
+- `knowledge\video_baseline.yaml`
+
 ## Project Layout
 
 - `src\dwarves_autoplayer\bot.py`: main autoplayer loop
 - `src\dwarves_autoplayer\playbook.py`: deterministic screen classifier and action playbook
+- `src\dwarves_autoplayer\train_from_video.py`: offline video sampler for tutorial/playthrough footage
 - `src\dwarves_autoplayer\learner.py`: screenshot capture and autonomous click learner
 - `src\dwarves_autoplayer\bootstrap_knowledge.py`: wiki/guide baseline bootstrapper
 - `knowledge\baseline.yaml`: generated strategy and source baseline
