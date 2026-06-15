@@ -16,15 +16,17 @@ dependencies = [
   "PyYAML",
   "keyboard",
   "pygetwindow",
+  "requests",
+  "beautifulsoup4",
 ]
 
 [project.scripts]
 dwarves-bot = "dwarves_autoplayer.bot:main"
 dwarves-capture-template = "dwarves_autoplayer.capture_template:main"
+dwarves-bootstrap-knowledge = "dwarves_autoplayer.bootstrap_knowledge:main"
 
 [tool.setuptools]
 package-dir = {"" = "src"}
 
 [tool.setuptools.packages.find]
 where = ["src"]
-

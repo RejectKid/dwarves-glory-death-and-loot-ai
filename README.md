@@ -25,6 +25,14 @@ cd "E:\Projects\dwarves-autoplayer"
 3. Start the game in Steam.
 4. Use windowed or borderless windowed mode if possible. Keep scaling at 100% while you teach templates.
 
+5. Optional but recommended before autonomous play:
+
+```powershell
+.\run_bootstrap_knowledge.bat
+```
+
+This caches public wiki/guide extracts and images into `knowledge\` and writes `knowledge\baseline.yaml`.
+
 ## Teach The Bot
 
 The bot needs small screenshots of buttons or labels. Capture clean snippets, not the whole screen.
@@ -66,6 +74,8 @@ For hands-off exploration, use:
 ```
 
 This starts immediately. It captures screenshots, fingerprints repeated screens, detects button-like UI regions, tries clicks, and records which clicks changed the screen. Its learning state is saved in `learning_data\`.
+
+If `knowledge\baseline.yaml` is missing, autonomous mode bootstraps it first from public wiki/guide sources.
 
 For the older template-first mode, use:
 
@@ -116,6 +126,8 @@ The first run may make dumb clicks while it explores. Later runs should reuse cl
 
 - `src\dwarves_autoplayer\bot.py`: main autoplayer loop
 - `src\dwarves_autoplayer\learner.py`: screenshot capture and autonomous click learner
+- `src\dwarves_autoplayer\bootstrap_knowledge.py`: wiki/guide baseline bootstrapper
+- `knowledge\baseline.yaml`: generated strategy and source baseline
 - `src\dwarves_autoplayer\capture_template.py`: template capture helper
 - `config.yaml`: strategy and matching configuration
 - `templates\`: your local button/label screenshots

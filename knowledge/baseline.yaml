@@ -1,0 +1,126 @@
+generated_at: '2026-06-15 17:01:43'
+purpose: Seed knowledge for local screen-based Dwarves autoplayer decisions.
+sources:
+- name: wiki_home
+  url: https://dwarves-glory-death-and-loot.fandom.com/wiki/Dwarves:_Glory,_Death_and_Loot_Wiki
+  title: https://dwarves-glory-death-and-loot.fandom.com/wiki/Dwarves:_Glory,_Death_and_Loot_Wiki
+- name: professions
+  url: https://dwarves-glory-death-and-loot.fandom.com/wiki/Professions
+  title: https://dwarves-glory-death-and-loot.fandom.com/wiki/Professions
+- name: formations
+  url: https://dwarves-glory-death-and-loot.fandom.com/wiki/Formations
+  title: https://dwarves-glory-death-and-loot.fandom.com/wiki/Formations
+- name: stats
+  url: https://dwarves-glory-death-and-loot.fandom.com/wiki/Stats
+  title: https://dwarves-glory-death-and-loot.fandom.com/wiki/Stats
+- name: shop
+  url: https://dwarves-glory-death-and-loot.fandom.com/wiki/Shop
+  title: https://dwarves-glory-death-and-loot.fandom.com/wiki/Shop
+- name: leveling
+  url: https://dwarves-glory-death-and-loot.fandom.com/wiki/Leveling
+  title: https://dwarves-glory-death-and-loot.fandom.com/wiki/Leveling
+- name: ultimates
+  url: https://dwarves-glory-death-and-loot.fandom.com/wiki/Ultimates
+  title: https://dwarves-glory-death-and-loot.fandom.com/wiki/Ultimates
+- name: steam_stumbling_blocks
+  url: https://steamcommunity.com/sharedfiles/filedetails/?id=3449234832
+  title: 'Steam Community :: Guide :: Tips and Common Stumbling Blocks'
+- name: steam_hints
+  url: https://steamcommunity.com/sharedfiles/filedetails/?id=3125186427
+  title: 'Steam Community :: Guide :: Dwarves - Hints and tricks so far.'
+- name: sets_tier_list
+  url: https://powerupgaming.co.uk/2026/01/26/dwarves-glory-death-and-loot-tier-list-best-sets-ranked/
+  title: 'Dwarves: Glory, Death and Loot Tier List — Best Sets Ranked (June 2026)
+    - Power Up Gaming'
+game_model:
+  loop:
+  - start run or fight
+  - survive auto battles
+  - collect rewards
+  - buy or upgrade useful gear
+  - improve clan/runes/talents between runs
+  - retry after defeat
+  important_screens:
+  - main menu
+  - start menu
+  - battle
+  - reward
+  - shop
+  - rune/talent menu
+  - defeat
+professions:
+  frontline:
+  - Knight
+  - Warrior
+  damage:
+  - Warrior
+  - Mage
+  - Archer
+  - Thief
+  support:
+  - Priest
+  - Supporter
+  baseline_priority:
+  - Keep durable frontliners alive.
+  - Prefer healing/support pieces when sustain is weak.
+  - Add crowd control and AoE damage as waves get harder.
+formation_rules:
+- Winning battles with lineup requirements unlocks formations.
+- Three or more of a profession can unlock profession formations.
+- Supporter-heavy Bannerlords can add strong healing based on Supporter max health.
+stats_rules:
+- Base stats come from the dwarf as bought.
+- Growth comes from profession levels and artifacts.
+- Items provide gear stats.
+- Special stats come from skill tree/rune effects and artifact side effects.
+item_set_priorities:
+  s_tier:
+  - Djinn
+  - Golden
+  - Executioner
+  - Dragon
+  - White Reaver
+  - Umbra
+  a_tier:
+  - Dwarven
+  - Holy Authority
+  - Boar
+  - Crimson
+  - Night
+  - Titan
+  - Holy Smite
+  notes:
+  - Prioritize complete set synergies over isolated low-impact pieces.
+  - Executioner and Golden are useful baseline targets for early carry/tank logic.
+ui_priorities:
+  high:
+  - start
+  - fight
+  - continue
+  - claim
+  - retry
+  - ok
+  - confirm
+  - upgrade
+  - buy
+  - equip
+  medium:
+  - reroll
+  - shop
+  - rune
+  - talent
+  - formation
+  - daily
+  avoid:
+  - delete
+  - sell
+  - retire
+  - reset
+  - new clan
+autoplayer_policy:
+  safe_default: Click high-priority progress buttons first, avoid destructive labels,
+    then explore unknown buttons.
+  shop_default: Prefer upgrades/equips/buys, then reroll only when no useful purchase
+    is found.
+  learning_default: Save screenshots and crops, record clicks that change screens,
+    and down-rank clicks that do nothing.

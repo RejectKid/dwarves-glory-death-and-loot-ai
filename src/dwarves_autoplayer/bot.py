@@ -15,6 +15,7 @@ import pyautogui
 import pygetwindow as gw
 import yaml
 
+from dwarves_autoplayer.baseline import load_baseline
 from dwarves_autoplayer.learner import AutonomousLearner
 
 
@@ -164,6 +165,7 @@ class Bot:
         self.quit_requested = False
         self.last_action_at: dict[str, float] = {}
         self.templates = load_templates(ROOT / config.get("template_dir", "templates"))
+        self.baseline = load_baseline()
         self.learner = AutonomousLearner(ROOT, config)
 
     def install_hotkeys(self) -> None:
@@ -244,6 +246,13 @@ class Bot:
 
         title_parts = self.config.get("window_title_contains", ["Dwarves"])
         logging.info("Loaded %s templates: %s", len(self.templates), ", ".join(sorted(self.templates)) or "none")
+        if self.baseline:
+            sources = self.baseline.get("sources", [])
+            set_names = self.baseline.get("item_set_priorities", {}).get("s_tier", [])
+            logging.info("Loaded baseline knowledge from %s sources", len(sources))
+            logging.info("Baseline S-tier set targets: %s", ", ".join(set_names) if set_names else "none")
+        else:
+            logging.info("No baseline knowledge found. Run run_bootstrap_knowledge.bat to seed it.")
         if self.learner.enabled:
             logging.info("Autonomous learner enabled. Screenshots/state go to %s", self.learner.data_dir)
         logging.info("Press %s to start/pause. Press %s to quit.", self.config["hotkeys"]["toggle"], self.config["hotkeys"]["quit"])
