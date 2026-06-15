@@ -9,6 +9,5 @@ if not exist "%PYTHON_EXE%" (
   exit /b 1
 )
 
-"%PYTHON_EXE%" -m dwarves_autoplayer.train_from_video --video "%CD%\learning_data\videos\tutorial1.mp4"
+"%PYTHON_EXE%" -m dwarves_autoplayer.train_from_video --all
 pause
-

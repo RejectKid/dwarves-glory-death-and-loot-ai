@@ -138,16 +138,16 @@ It prints the detected state and planned click for the latest captured screensho
 
 ## Tutorial Video Training
 
-Put tutorial or playthrough videos in `learning_data\videos\`. To process `tutorial1.mp4`:
+Put tutorial or playthrough videos in `learning_data\videos\`. To process every video in that folder:
 
 ```powershell
 .\train_tutorial_video.bat
 ```
 
-This samples the video, classifies frames with the state playbook, saves representative frames, and writes:
+This samples the videos, classifies frames with the state playbook, saves representative frames, and writes:
 
-- `learning_data\video_training\tutorial1\timeline.csv`
-- `learning_data\video_training\tutorial1\summary.json`
+- `learning_data\video_training\<video-name>\timeline.csv`
+- `learning_data\video_training\<video-name>\summary.json`
 - `knowledge\video_baseline.yaml`
 
 ## Project Layout

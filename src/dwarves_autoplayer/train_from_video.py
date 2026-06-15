@@ -15,12 +15,14 @@ from dwarves_autoplayer.playbook import DwarvesPlaybook
 
 
 ROOT = Path.cwd()
-DEFAULT_VIDEO = ROOT / "learning_data" / "videos" / "tutorial1.mp4"
+VIDEO_DIR = ROOT / "learning_data" / "videos"
+DEFAULT_VIDEO = VIDEO_DIR / "tutorial1.mp4"
 
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     parser.add_argument("--video", default=str(DEFAULT_VIDEO), help="Tutorial/playthrough video path.")
+    parser.add_argument("--all", action="store_true", help="Process every video in learning_data/videos.")
     parser.add_argument("--interval-seconds", type=float, default=5.0, help="Sampling interval.")
     parser.add_argument("--max-samples", type=int, default=0, help="Optional cap for quick tests.")
     parser.add_argument("--examples-per-state", type=int, default=5, help="Representative frames to save per state.")
@@ -39,9 +41,18 @@ def write_csv(path: Path, rows: list[dict[str, Any]]) -> None:
         writer.writerows(rows)
 
 
-def main() -> None:
-    args = parse_args()
-    video_path = Path(args.video)
+def video_paths(args: argparse.Namespace) -> list[Path]:
+    if not args.all:
+        return [Path(args.video)]
+
+    extensions = {".mp4", ".mkv", ".mov", ".webm", ".avi"}
+    paths = [path for path in VIDEO_DIR.glob("*") if path.is_file() and path.suffix.lower() in extensions]
+    if not paths:
+        raise SystemExit(f"No videos found in {VIDEO_DIR}")
+    return sorted(paths, key=lambda item: item.name.lower())
+
+
+def process_video(video_path: Path, args: argparse.Namespace) -> dict[str, Any]:
     cap = cv2.VideoCapture(str(video_path))
     if not cap.isOpened():
         raise SystemExit(f"Could not open video: {video_path}")
@@ -54,6 +65,9 @@ def main() -> None:
     playbook = DwarvesPlaybook(load_config())
     out_dir = output_dir(video_path)
     frames_dir = out_dir / "representative_frames"
+    if frames_dir.exists():
+        for frame_path in frames_dir.glob("*.png"):
+            frame_path.unlink()
     frames_dir.mkdir(parents=True, exist_ok=True)
 
     rows: list[dict[str, Any]] = []
@@ -117,16 +131,62 @@ def main() -> None:
 
     with (out_dir / "summary.json").open("w", encoding="utf-8") as handle:
         json.dump(summary, handle, indent=2, sort_keys=True)
-    with (ROOT / "knowledge" / "video_baseline.yaml").open("w", encoding="utf-8") as handle:
-        yaml.safe_dump(summary, handle, sort_keys=False)
 
     print(f"Video: {video_path}")
     print(f"Duration: {duration:.1f}s, samples: {len(rows)}")
     print(f"Wrote: {out_dir / 'timeline.csv'}")
     print(f"Wrote: {out_dir / 'summary.json'}")
-    print(f"Wrote: {ROOT / 'knowledge' / 'video_baseline.yaml'}")
     print("State counts:")
     for state, count in state_counts.most_common():
+        print(f"  {state}: {count}")
+    print()
+
+    return summary
+
+
+def aggregate_summaries(summaries: list[dict[str, Any]], interval_seconds: float) -> dict[str, Any]:
+    state_counts: Counter[str] = Counter()
+    transition_counts: Counter[str] = Counter()
+    total_duration = 0.0
+    total_samples = 0
+
+    for summary in summaries:
+        state_counts.update(summary.get("state_counts", {}))
+        transition_counts.update(summary.get("transitions", {}))
+        total_duration += float(summary.get("duration_seconds", 0.0))
+        total_samples += int(summary.get("samples", 0))
+
+    return {
+        "videos": [
+            {
+                "video": summary["video"],
+                "duration_seconds": summary["duration_seconds"],
+                "samples": summary["samples"],
+                "state_counts": summary["state_counts"],
+            }
+            for summary in summaries
+        ],
+        "interval_seconds": interval_seconds,
+        "total_duration_seconds": total_duration,
+        "total_samples": total_samples,
+        "aggregate_state_counts": dict(state_counts),
+        "aggregate_transitions": dict(transition_counts),
+    }
+
+
+def main() -> None:
+    args = parse_args()
+    summaries = [process_video(path, args) for path in video_paths(args)]
+    aggregate = aggregate_summaries(summaries, args.interval_seconds)
+
+    baseline_path = ROOT / "knowledge" / "video_baseline.yaml"
+    baseline_path.parent.mkdir(parents=True, exist_ok=True)
+    with baseline_path.open("w", encoding="utf-8") as handle:
+        yaml.safe_dump(aggregate, handle, sort_keys=False)
+
+    print(f"Wrote aggregate baseline: {baseline_path}")
+    print("Aggregate state counts:")
+    for state, count in Counter(aggregate["aggregate_state_counts"]).most_common():
         print(f"  {state}: {count}")
 
 

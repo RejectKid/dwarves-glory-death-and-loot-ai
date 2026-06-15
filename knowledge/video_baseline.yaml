@@ -1,37 +1,74 @@
-video: learning_data\videos\tutorial1.mp4
-fps: 60.0
-frame_count: 226876
-duration_seconds: 3781.266666666667
+videos:
+- video: E:\Projects\dwarves-autoplayer\learning_data\videos\Tips.mp4
+  duration_seconds: 3556.266666666667
+  samples: 712
+  state_counts:
+    unknown: 46
+    battle_report: 111
+    battle_select: 35
+    main_hall: 483
+    battle_running: 26
+    shop_menu: 11
+- video: E:\Projects\dwarves-autoplayer\learning_data\videos\tutorial1.mp4
+  duration_seconds: 3781.266666666667
+  samples: 757
+  state_counts:
+    main_hall: 461
+    battle_report: 16
+    battle_select: 85
+    battle_running: 96
+    shop_menu: 4
+    unknown: 95
+- video: E:\Projects\dwarves-autoplayer\learning_data\videos\tutorial2.mp4
+  duration_seconds: 3674.133333333333
+  samples: 735
+  state_counts:
+    main_hall: 531
+    unknown: 102
+    battle_report: 51
+    battle_running: 23
+    battle_select: 26
+    shop_menu: 2
 interval_seconds: 5.0
-samples: 757
-state_counts:
-  main_hall: 461
-  battle_report: 16
-  battle_select: 85
-  battle_running: 96
-  shop_menu: 4
-  unknown: 95
-transitions:
-  none->main_hall: 1
-  main_hall->main_hall: 377
-  main_hall->battle_report: 4
-  battle_report->battle_report: 12
-  battle_report->main_hall: 2
-  main_hall->battle_select: 41
-  battle_select->main_hall: 29
-  battle_select->battle_select: 40
-  battle_select->battle_running: 13
-  battle_running->battle_running: 79
-  battle_running->main_hall: 15
-  main_hall->battle_running: 3
+total_duration_seconds: 11011.666666666668
+total_samples: 2204
+aggregate_state_counts:
+  unknown: 243
+  battle_report: 178
+  battle_select: 146
+  main_hall: 1475
+  battle_running: 145
+  shop_menu: 17
+aggregate_transitions:
+  none->unknown: 1
+  unknown->battle_report: 3
+  battle_report->battle_report: 144
+  battle_report->battle_select: 1
+  battle_select->battle_select: 74
+  battle_select->battle_report: 3
+  battle_report->main_hall: 28
+  main_hall->unknown: 95
+  unknown->unknown: 127
+  unknown->battle_running: 6
+  battle_running->battle_running: 111
+  battle_running->unknown: 3
+  unknown->shop_menu: 5
+  shop_menu->shop_menu: 6
+  shop_menu->unknown: 5
+  unknown->main_hall: 96
+  main_hall->battle_select: 66
+  battle_select->unknown: 7
+  main_hall->main_hall: 1272
+  main_hall->battle_report: 27
+  main_hall->battle_running: 11
+  battle_running->main_hall: 29
+  battle_select->main_hall: 45
+  battle_report->unknown: 5
+  none->main_hall: 2
+  battle_select->battle_running: 17
   battle_running->shop_menu: 2
-  shop_menu->main_hall: 2
+  shop_menu->main_hall: 3
   shop_menu->battle_select: 2
-  main_hall->unknown: 34
-  unknown->main_hall: 35
-  battle_select->unknown: 3
-  unknown->unknown: 56
-  main_hall->shop_menu: 2
-  unknown->battle_running: 1
-  unknown->battle_select: 2
-  battle_report->unknown: 2
+  main_hall->shop_menu: 4
+  unknown->battle_select: 3
+  shop_menu->battle_report: 1
