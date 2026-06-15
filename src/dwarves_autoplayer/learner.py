@@ -78,6 +78,7 @@ class AutonomousLearner:
 
     def observe(self, screen: np.ndarray) -> str:
         screen_id = self.fingerprint(screen)
+        self.update_click_probe(screen)
         screens = self.state.setdefault("screens", {})
         screen_state = screens.setdefault(
             screen_id,
@@ -107,7 +108,16 @@ class AutonomousLearner:
         previous_screen_id = self.last_click["screen_id"]
         candidate_key = self.last_click["candidate_key"]
         previous_hash = self.last_click["screen_hash"]
-        changed = self.hash_distance(previous_hash, current_screen_id) >= int(self.config.get("changed_hash_bits", 10))
+        previous_probe = np.array(self.last_click.get("screen_probe", []), dtype=np.uint8)
+        current_probe = np.array(self.last_click.get("current_probe", []), dtype=np.uint8)
+        mean_absdiff = 0.0
+        if previous_probe.size and current_probe.size and previous_probe.shape == current_probe.shape:
+            mean_absdiff = float(np.mean(cv2.absdiff(previous_probe, current_probe)))
+
+        changed = (
+            self.hash_distance(previous_hash, current_screen_id) >= int(self.config.get("changed_hash_bits", 10))
+            and mean_absdiff >= float(self.config.get("changed_mean_absdiff", 6.0))
+        )
 
         candidate_state = self.state["screens"][previous_screen_id]["candidates"].setdefault(
             candidate_key,
@@ -116,9 +126,19 @@ class AutonomousLearner:
         candidate_state["attempts"] = int(candidate_state.get("attempts", 0)) + 1
         if changed:
             candidate_state["successes"] = int(candidate_state.get("successes", 0)) + 1
-            logging.info("Learner marked click successful: screen=%s candidate=%s", previous_screen_id[:8], candidate_key)
+            logging.info(
+                "Learner marked click successful: screen=%s candidate=%s diff=%.2f",
+                previous_screen_id[:8],
+                candidate_key,
+                mean_absdiff,
+            )
         else:
-            logging.info("Learner marked click unchanged: screen=%s candidate=%s", previous_screen_id[:8], candidate_key)
+            logging.info(
+                "Learner marked click unchanged: screen=%s candidate=%s diff=%.2f",
+                previous_screen_id[:8],
+                candidate_key,
+                mean_absdiff,
+            )
 
         self.last_click = None
 
@@ -159,6 +179,8 @@ class AutonomousLearner:
         min_h = int(self.config.get("min_candidate_height", 24))
         max_w = int(screen_w * float(self.config.get("max_candidate_screen_width", 0.65)))
         max_h = int(screen_h * float(self.config.get("max_candidate_screen_height", 0.22)))
+        if self.config.get("ignore_bottom_toolbar", True) and y > int(screen_h * float(self.config.get("bottom_toolbar_cutoff", 0.90))):
+            return False
         if w < min_w or h < min_h or w > max_w or h > max_h:
             return False
 
@@ -213,7 +235,9 @@ class AutonomousLearner:
             attempts = int(state.get("attempts", 0))
             successes = int(state.get("successes", 0))
             last_clicked_at = float(state.get("last_clicked_at", 0))
-            if now - last_clicked_at < cooldown:
+            failed_cooldown = float(self.config.get("failed_candidate_cooldown_seconds", 45.0))
+            active_cooldown = cooldown if successes else failed_cooldown
+            if now - last_clicked_at < active_cooldown:
                 continue
 
             learned_bonus = (successes + 1) / (attempts + 2)
@@ -235,6 +259,8 @@ class AutonomousLearner:
             "screen_hash": screen_id,
             "candidate_key": candidate.key,
             "clicked_at": time.monotonic(),
+            "screen_probe": self._screen_probe(screen).tolist(),
+            "current_probe": self._screen_probe(screen).tolist(),
         }
 
         crop = screen[candidate.y : candidate.y + candidate.h, candidate.x : candidate.x + candidate.w]
@@ -243,3 +269,10 @@ class AutonomousLearner:
             if not out_path.exists():
                 cv2.imwrite(str(out_path), crop)
 
+    def update_click_probe(self, screen: np.ndarray) -> None:
+        if self.last_click:
+            self.last_click["current_probe"] = self._screen_probe(screen).tolist()
+
+    def _screen_probe(self, screen: np.ndarray) -> np.ndarray:
+        gray = cv2.cvtColor(screen, cv2.COLOR_BGR2GRAY)
+        return cv2.resize(gray, (96, 54), interpolation=cv2.INTER_AREA)

@@ -16,13 +16,36 @@ autonomous_learning:
   screenshot_interval_seconds: 2.5
   click_result_delay_seconds: 1.0
   changed_hash_bits: 10
+  changed_mean_absdiff: 6.0
   candidate_cooldown_seconds: 4.0
+  failed_candidate_cooldown_seconds: 45.0
   max_candidates_per_screen: 12
-  min_candidate_width: 60
-  min_candidate_height: 24
+  min_candidate_width: 90
+  min_candidate_height: 40
   max_candidate_screen_width: 0.65
   max_candidate_screen_height: 0.22
-  edge_margin: 8
+  edge_margin: 28
+  ignore_bottom_toolbar: true
+  bottom_toolbar_cutoff: 0.90
+
+seed_clicks:
+  enabled: true
+  cooldown_seconds: 8.0
+  # Window-relative ratios. These are intentionally broad starting points for the
+  # 1920x1080-ish Dwarves UI and scale with the window.
+  actions:
+    - name: "main_bottom_battle_tab"
+      x_ratio: 0.660
+      y_ratio: 0.955
+      priority: 90
+    - name: "main_center_swords"
+      x_ratio: 0.500
+      y_ratio: 0.555
+      priority: 80
+    - name: "right_side_start_panel"
+      x_ratio: 0.890
+      y_ratio: 0.555
+      priority: 70
 
 hotkeys:
   toggle: "ctrl+alt+s"

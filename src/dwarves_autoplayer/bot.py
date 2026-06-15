@@ -164,6 +164,7 @@ class Bot:
         self.running = auto_start
         self.quit_requested = False
         self.last_action_at: dict[str, float] = {}
+        self.last_seed_click_at: dict[str, float] = {}
         self.templates = load_templates(ROOT / config.get("template_dir", "templates"))
         self.baseline = load_baseline()
         self.learner = AutonomousLearner(ROOT, config)
@@ -220,6 +221,9 @@ class Bot:
             time.sleep(float(self.config.get("after_click_delay_seconds", 0.75)))
             return True
 
+        if self.try_seed_click(window, screen, screen_id):
+            return True
+
         if self.learner.enabled:
             candidate = self.learner.choose_candidate(screen, screen_id)
             if candidate:
@@ -239,6 +243,48 @@ class Bot:
                 return True
 
         return False
+
+    def try_seed_click(self, window, screen: np.ndarray, screen_id: str) -> bool:
+        seed_config = self.config.get("seed_clicks", {})
+        if not seed_config.get("enabled", False):
+            return False
+
+        if not self.looks_like_main_hall(screen):
+            return False
+
+        cooldown = float(seed_config.get("cooldown_seconds", 8.0))
+        actions = sorted(seed_config.get("actions", []), key=lambda item: int(item.get("priority", 0)), reverse=True)
+        now = time.monotonic()
+
+        for action in actions:
+            name = action["name"]
+            if now - self.last_seed_click_at.get(name, 0) < cooldown:
+                continue
+
+            x = int(window.width * float(action["x_ratio"]))
+            y = int(window.height * float(action["y_ratio"]))
+            logging.info("Seed click %s on likely main hall screen=%s", name, screen_id[:8])
+            click_window_point(window, x, y, name)
+            self.last_seed_click_at[name] = now
+            time.sleep(float(self.config.get("after_click_delay_seconds", 0.75)))
+            return True
+
+        return False
+
+    def looks_like_main_hall(self, screen: np.ndarray) -> bool:
+        height, width = screen.shape[:2]
+        upper = screen[int(height * 0.18) : int(height * 0.52), :]
+        lower = screen[int(height * 0.58) : int(height * 0.90), :]
+        if upper.size == 0 or lower.size == 0:
+            return False
+
+        upper_gray = cv2.cvtColor(upper, cv2.COLOR_BGR2GRAY)
+        lower_gray = cv2.cvtColor(lower, cv2.COLOR_BGR2GRAY)
+        upper_edges = cv2.Canny(upper_gray, 40, 120).mean()
+        lower_edges = cv2.Canny(lower_gray, 40, 120).mean()
+
+        # Main hall has dense card/inventory grid lines in both upper and lower halves.
+        return upper_edges > 12 and lower_edges > 10
 
     def run(self) -> None:
         pyautogui.FAILSAFE = True
