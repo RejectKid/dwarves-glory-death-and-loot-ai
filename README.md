@@ -112,7 +112,14 @@ Edit `config.yaml` to change priorities, click slots, delays, and confidence thr
 
 ## Autonomous Learning
 
-Autonomous mode is a bootstrapping explorer, not a full trained AI model. It does not read game memory or know item stats. It learns by trying visible UI candidates and tracking outcomes.
+Autonomous mode now uses a deterministic state playbook first. It identifies the current screen and uses a specific action plan:
+
+- `main_hall`: open battle selection
+- `battle_select`: choose a visible battle card
+- `battle_running`: wait and keep battle speed high
+- `battle_report`: advance back toward the hall/rewards loop
+
+The old free-click explorer is disabled by default and should only be used for debugging.
 
 It creates:
 
@@ -120,11 +127,18 @@ It creates:
 - `learning_data\templates\`: crops of clicked UI candidates
 - `learning_data\state.json`: remembered screens, candidates, attempts, and successes
 
-The first run may make dumb clicks while it explores. Later runs should reuse clicks that changed screens on the same visual state.
+If the bot stalls, run:
+
+```powershell
+.\diagnose_latest.bat
+```
+
+It prints the detected state and planned click for the latest captured screenshot.
 
 ## Project Layout
 
 - `src\dwarves_autoplayer\bot.py`: main autoplayer loop
+- `src\dwarves_autoplayer\playbook.py`: deterministic screen classifier and action playbook
 - `src\dwarves_autoplayer\learner.py`: screenshot capture and autonomous click learner
 - `src\dwarves_autoplayer\bootstrap_knowledge.py`: wiki/guide baseline bootstrapper
 - `knowledge\baseline.yaml`: generated strategy and source baseline

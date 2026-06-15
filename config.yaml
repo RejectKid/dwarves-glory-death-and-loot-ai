@@ -12,6 +12,7 @@ log_file: "bot.log"
 
 autonomous_learning:
   enabled: true
+  fallback_exploration_enabled: false
   data_dir: "learning_data"
   screenshot_interval_seconds: 2.5
   click_result_delay_seconds: 1.0
@@ -29,7 +30,7 @@ autonomous_learning:
   bottom_toolbar_cutoff: 0.90
 
 seed_clicks:
-  enabled: true
+  enabled: false
   cooldown_seconds: 8.0
   # Window-relative ratios. These are intentionally broad starting points for the
   # 1920x1080-ish Dwarves UI and scale with the window.
@@ -46,6 +47,10 @@ seed_clicks:
       x_ratio: 0.890
       y_ratio: 0.555
       priority: 70
+
+state_playbook:
+  enabled: true
+  log_state: true
 
 hotkeys:
   toggle: "ctrl+alt+s"

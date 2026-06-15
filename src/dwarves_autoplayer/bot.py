@@ -17,6 +17,7 @@ import yaml
 
 from dwarves_autoplayer.baseline import load_baseline
 from dwarves_autoplayer.learner import AutonomousLearner
+from dwarves_autoplayer.playbook import DwarvesPlaybook
 
 
 ROOT = Path.cwd()
@@ -168,6 +169,7 @@ class Bot:
         self.templates = load_templates(ROOT / config.get("template_dir", "templates"))
         self.baseline = load_baseline()
         self.learner = AutonomousLearner(ROOT, config)
+        self.playbook = DwarvesPlaybook(config)
 
     def install_hotkeys(self) -> None:
         hotkeys = self.config.get("hotkeys", {})
@@ -194,6 +196,15 @@ class Bot:
         threshold = float(self.config.get("match_threshold", 0.87))
         screen = screenshot_window(window)
         screen_id = self.learner.observe(screen) if self.learner.enabled else ""
+
+        playbook_action = self.playbook.choose_action(screen)
+        if playbook_action:
+            x = int(window.width * playbook_action.x_ratio)
+            y = int(window.height * playbook_action.y_ratio)
+            click_window_point(window, x, y, playbook_action.name)
+            time.sleep(playbook_action.after_delay_seconds)
+            return True
+
         actions = sorted(self.config.get("actions", []), key=lambda item: int(item.get("priority", 0)), reverse=True)
 
         for action in actions:
@@ -224,7 +235,7 @@ class Bot:
         if self.try_seed_click(window, screen, screen_id):
             return True
 
-        if self.learner.enabled:
+        if self.learner.enabled and self.config.get("autonomous_learning", {}).get("fallback_exploration_enabled", False):
             candidate = self.learner.choose_candidate(screen, screen_id)
             if candidate:
                 x, y = candidate.center
@@ -301,6 +312,8 @@ class Bot:
             logging.info("No baseline knowledge found. Run run_bootstrap_knowledge.bat to seed it.")
         if self.learner.enabled:
             logging.info("Autonomous learner enabled. Screenshots/state go to %s", self.learner.data_dir)
+        if self.playbook.enabled:
+            logging.info("State playbook enabled. Free exploration is %s", "enabled" if self.config.get("autonomous_learning", {}).get("fallback_exploration_enabled", False) else "disabled")
         logging.info("Press %s to start/pause. Press %s to quit.", self.config["hotkeys"]["toggle"], self.config["hotkeys"]["quit"])
 
         while not self.quit_requested:
