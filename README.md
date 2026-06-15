@@ -33,6 +33,12 @@ cd "E:\Projects\dwarves-autoplayer"
 
 This caches public wiki/guide extracts and images into `knowledge\` and writes `knowledge\baseline.yaml`.
 
+To inspect the strategy baseline:
+
+```powershell
+.\knowledge_report.bat
+```
+
 ## Teach The Bot
 
 The bot needs small screenshots of buttons or labels. Capture clean snippets, not the whole screen.

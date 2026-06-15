@@ -1,4 +1,4 @@
-generated_at: '2026-06-15 17:01:43'
+generated_at: '2026-06-15 17:51:10'
 purpose: Seed knowledge for local screen-based Dwarves autoplayer decisions.
 sources:
 - name: wiki_home
@@ -7,9 +7,18 @@ sources:
 - name: professions
   url: https://dwarves-glory-death-and-loot.fandom.com/wiki/Professions
   title: https://dwarves-glory-death-and-loot.fandom.com/wiki/Professions
+- name: advanced_professions
+  url: https://dwarves-glory-death-and-loot.fandom.com/wiki/Advanced_Professions
+  title: https://dwarves-glory-death-and-loot.fandom.com/wiki/Advanced_Professions
 - name: formations
   url: https://dwarves-glory-death-and-loot.fandom.com/wiki/Formations
   title: https://dwarves-glory-death-and-loot.fandom.com/wiki/Formations
+- name: gear
+  url: https://dwarves-glory-death-and-loot.fandom.com/wiki/Gear
+  title: https://dwarves-glory-death-and-loot.fandom.com/wiki/Gear
+- name: sets
+  url: https://dwarves-glory-death-and-loot.fandom.com/wiki/Sets
+  title: https://dwarves-glory-death-and-loot.fandom.com/wiki/Sets
 - name: stats
   url: https://dwarves-glory-death-and-loot.fandom.com/wiki/Stats
   title: https://dwarves-glory-death-and-loot.fandom.com/wiki/Stats
@@ -28,10 +37,54 @@ sources:
 - name: steam_hints
   url: https://steamcommunity.com/sharedfiles/filedetails/?id=3125186427
   title: 'Steam Community :: Guide :: Dwarves - Hints and tricks so far.'
+- name: steam_improve_dwarfs
+  url: https://steamcommunity.com/app/2205850/discussions/0/595142432657552462/
+  title: 'idk how to improve my dwarfs :: Dwarves: Glory, Death and Loot General Discussions'
+- name: steam_my_build
+  url: https://steamcommunity.com/app/2205850/discussions/0/604149834549640548/
+  title: 'Normal Mode - My Build :: Dwarves: Glory, Death and Loot General Discussions'
+- name: steam_advanced_class_items
+  url: https://steamcommunity.com/app/2205850/discussions/0/4852155152090217800/
+  title: 'Advanced Classes set items :: Dwarves: Glory, Death and Loot General Discussions'
+- name: steam_immortal_build
+  url: https://steamcommunity.com/app/2205850/discussions/0/760681630846210215/
+  title: 'Immortal build :: Dwarves: Glory, Death and Loot General Discussions'
+- name: crazygames_how_to_play
+  url: https://www.crazygames.com/game/dwarves-glory-death-and-loot
+  title: 'Dwarves: Glory, Death, and Loot 🕹️ Play on CrazyGames'
+- name: thegamer_beginner_tips
+  url: https://www.thegamer.com/dwarves-glory-death-and-loot-best-beginner-starting-tips/
+  title: 'The Best Early Game Tips For Dwarves: Glory, Death And Loot'
+- name: thegamer_professions
+  url: https://www.thegamer.com/dwarves-glory-death-and-loot-complete-guide-what-are-professions/
+  title: 'What Professions Should You Use In Dwarves: Glory, Death And Loot'
+- name: thegamer_formations
+  url: https://www.thegamer.com/dwarves-glory-death-and-loot-complete-guide-every-formation-how-to-unlock/
+  title: 'Complete Formation List For Dwarves: Glory, Death And Loot'
 - name: sets_tier_list
   url: https://powerupgaming.co.uk/2026/01/26/dwarves-glory-death-and-loot-tier-list-best-sets-ranked/
   title: 'Dwarves: Glory, Death and Loot Tier List — Best Sets Ranked (June 2026)
     - Power Up Gaming'
+- name: reddit_fire_mage_build
+  url: https://old.reddit.com/r/DwarvesTheGame/comments/1k87d6c/another_build_that_works_well/
+  title: 'Another build that works well : DwarvesTheGame'
+- name: reddit_beginner_guide
+  url: https://old.reddit.com/r/DwarvesTheGame/comments/1jj3f38/new_beginner_guide_droped_quite_useful_xd/
+  title: 'New Beginner Guide droped - quite useful xD : DwarvesTheGame'
+- name: reddit_best_sets
+  url: https://old.reddit.com/r/DwarvesTheGame/comments/1qrguf0/best_sets/
+  title: 'Best sets? : DwarvesTheGame'
+- name: reddit_new_player_questions
+  url: https://old.reddit.com/r/DwarvesTheGame/comments/1qq1rku/help_me_enjoy_the_game_to_the_fullest_questions/
+  title: 'Help me enjoy the game to the fullest (questions inside) : DwarvesTheGame'
+- name: reddit_gem_farming
+  url: https://old.reddit.com/r/DwarvesTheGame/comments/1r7c4x0/gem_farming_strategy_up_to_168_gems_per_30_seconds/
+  title: 'Gem farming strategy (up to 168 gems per 30 seconds) : DwarvesTheGame'
+source_coverage:
+  wiki: 10
+  guide: 7
+  discussion: 4
+  reddit: 5
 game_model:
   loop:
   - start run or fight
@@ -48,6 +101,41 @@ game_model:
   - shop
   - rune/talent menu
   - defeat
+strategy_model:
+  early_game:
+  - Prioritize getting enough dwarves and weapons online before obsessing over random
+    loot.
+  - Push battles quickly when fights are easy; dying or resetting can still advance
+    long-term progress.
+  - Use the battle selection screen to choose manageable fights and keep the run loop
+    moving.
+  - Storage/inventory space matters because holding useful set pieces enables later
+    upgrades.
+  team_baseline:
+  - Use durable frontline dwarves to protect damage dealers.
+  - Maintain sustain through Priests or Supporters when fights start lasting longer.
+  - Add crowd control or area damage as waves become denser.
+  - Avoid spreading permanent upgrades too thin early; commit to a coherent damage/sustain
+    plan.
+  shopping:
+  - Buy/equip weapons that define useful professions before buying low-synergy extras.
+  - Prefer upgrades, set pieces, and role-defining items over random sidegrades.
+  - Reroll when no useful buy/equip/upgrade action is available and gold allows it.
+  - Advanced-profession set items and high-tier drops become relevant after shop progression.
+  runes_and_talents:
+  - Spend skill/rune points toward the current team plan instead of sprinkling points
+    everywhere.
+  - Target class-specific rune bonuses when a build leans heavily into one role.
+  - Mage/fire builds, healer sustain builds, and formation-based comps all need matching
+    runes.
+  automation_translation:
+  - 'When in doubt, choose actions that advance the battle loop: battle select, fight,
+    next, continue, retry.'
+  - Avoid destructive actions such as retire, sell, reset, delete, or new clan unless
+    explicitly planned.
+  - If the bot can read or infer choices, favor battle progress over idle menu exploration.
+  - Use video-derived state recognition for where to click; use wiki/guide baseline
+    for what to prioritize once OCR exists.
 professions:
   frontline:
   - Knight
@@ -60,6 +148,13 @@ professions:
   support:
   - Priest
   - Supporter
+  advanced_targets:
+  - Paladin
+  - Warpriest
+  - Warlock
+  - Reaper
+  - Cannoneer
+  - Beastmaster
   baseline_priority:
   - Keep durable frontliners alive.
   - Prefer healing/support pieces when sustain is weak.
@@ -89,9 +184,49 @@ item_set_priorities:
   - Night
   - Titan
   - Holy Smite
+  role_targets:
+    tank:
+    - Golden
+    - Umbra
+    healer:
+    - Djinn
+    - Druid
+    - Divine
+    warrior:
+    - Executioner
+    - Titan
+    - Dwarven
+    mage:
+    - Dragon
+    - Storm
+    - Frost
+    thief:
+    - White Reaver
+    - Assassin
+    - Crescent
+    supporter:
+    - Centurion
   notes:
   - Prioritize complete set synergies over isolated low-impact pieces.
   - Executioner and Golden are useful baseline targets for early carry/tank logic.
+  - Djinn/other healer sets are strong sustain targets when the team starts losing
+    longer fights.
+known_build_archetypes:
+  balanced_core:
+  - frontline tank
+  - physical or magical damage carry
+  - healer/support sustain
+  - secondary crowd control or area damage
+  mage_fire_core:
+  - multiple mages
+  - mana regeneration
+  - fire damage/rage/hope style runes
+  - intelligence and magic penetration gear
+  sustain_core:
+  - Golden or other durable tank setup
+  - Djinn/healer sustain
+  - support banner utility
+  - damage carry protected by formation and healing
 ui_priorities:
   high:
   - start

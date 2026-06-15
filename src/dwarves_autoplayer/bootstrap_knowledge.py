@@ -32,14 +32,30 @@ class Source:
 SOURCES = [
     Source("wiki_home", "https://dwarves-glory-death-and-loot.fandom.com/wiki/Dwarves:_Glory,_Death_and_Loot_Wiki", "wiki"),
     Source("professions", "https://dwarves-glory-death-and-loot.fandom.com/wiki/Professions", "wiki"),
+    Source("advanced_professions", "https://dwarves-glory-death-and-loot.fandom.com/wiki/Advanced_Professions", "wiki"),
     Source("formations", "https://dwarves-glory-death-and-loot.fandom.com/wiki/Formations", "wiki"),
+    Source("gear", "https://dwarves-glory-death-and-loot.fandom.com/wiki/Gear", "wiki"),
+    Source("sets", "https://dwarves-glory-death-and-loot.fandom.com/wiki/Sets", "wiki"),
     Source("stats", "https://dwarves-glory-death-and-loot.fandom.com/wiki/Stats", "wiki"),
     Source("shop", "https://dwarves-glory-death-and-loot.fandom.com/wiki/Shop", "wiki"),
     Source("leveling", "https://dwarves-glory-death-and-loot.fandom.com/wiki/Leveling", "wiki"),
     Source("ultimates", "https://dwarves-glory-death-and-loot.fandom.com/wiki/Ultimates", "wiki"),
     Source("steam_stumbling_blocks", "https://steamcommunity.com/sharedfiles/filedetails/?id=3449234832", "guide"),
     Source("steam_hints", "https://steamcommunity.com/sharedfiles/filedetails/?id=3125186427", "guide"),
+    Source("steam_improve_dwarfs", "https://steamcommunity.com/app/2205850/discussions/0/595142432657552462/", "discussion"),
+    Source("steam_my_build", "https://steamcommunity.com/app/2205850/discussions/0/604149834549640548/", "discussion"),
+    Source("steam_advanced_class_items", "https://steamcommunity.com/app/2205850/discussions/0/4852155152090217800/", "discussion"),
+    Source("steam_immortal_build", "https://steamcommunity.com/app/2205850/discussions/0/760681630846210215/", "discussion"),
+    Source("crazygames_how_to_play", "https://www.crazygames.com/game/dwarves-glory-death-and-loot", "guide"),
+    Source("thegamer_beginner_tips", "https://www.thegamer.com/dwarves-glory-death-and-loot-best-beginner-starting-tips/", "guide"),
+    Source("thegamer_professions", "https://www.thegamer.com/dwarves-glory-death-and-loot-complete-guide-what-are-professions/", "guide"),
+    Source("thegamer_formations", "https://www.thegamer.com/dwarves-glory-death-and-loot-complete-guide-every-formation-how-to-unlock/", "guide"),
     Source("sets_tier_list", "https://powerupgaming.co.uk/2026/01/26/dwarves-glory-death-and-loot-tier-list-best-sets-ranked/", "guide"),
+    Source("reddit_fire_mage_build", "https://old.reddit.com/r/DwarvesTheGame/comments/1k87d6c/another_build_that_works_well/", "reddit"),
+    Source("reddit_beginner_guide", "https://old.reddit.com/r/DwarvesTheGame/comments/1jj3f38/new_beginner_guide_droped_quite_useful_xd/", "reddit"),
+    Source("reddit_best_sets", "https://old.reddit.com/r/DwarvesTheGame/comments/1qrguf0/best_sets/", "reddit"),
+    Source("reddit_new_player_questions", "https://old.reddit.com/r/DwarvesTheGame/comments/1qq1rku/help_me_enjoy_the_game_to_the_fullest_questions/", "reddit"),
+    Source("reddit_gem_farming", "https://old.reddit.com/r/DwarvesTheGame/comments/1r7c4x0/gem_farming_strategy_up_to_168_gems_per_30_seconds/", "reddit"),
 ]
 
 
@@ -159,10 +175,15 @@ def download_images(client: requests.Session, page: dict[str, Any], source_name:
 
 
 def build_baseline(pages: list[dict[str, Any]]) -> dict[str, Any]:
+    source_kind_counts: dict[str, int] = {}
+    for page in pages:
+        source_kind_counts[page["kind"]] = source_kind_counts.get(page["kind"], 0) + 1
+
     return {
         "generated_at": time.strftime("%Y-%m-%d %H:%M:%S"),
         "purpose": "Seed knowledge for local screen-based Dwarves autoplayer decisions.",
         "sources": [{"name": page["name"], "url": page["url"], "title": page["title"]} for page in pages],
+        "source_coverage": source_kind_counts,
         "game_model": {
             "loop": [
                 "start run or fight",
@@ -174,10 +195,42 @@ def build_baseline(pages: list[dict[str, Any]]) -> dict[str, Any]:
             ],
             "important_screens": ["main menu", "start menu", "battle", "reward", "shop", "rune/talent menu", "defeat"],
         },
+        "strategy_model": {
+            "early_game": [
+                "Prioritize getting enough dwarves and weapons online before obsessing over random loot.",
+                "Push battles quickly when fights are easy; dying or resetting can still advance long-term progress.",
+                "Use the battle selection screen to choose manageable fights and keep the run loop moving.",
+                "Storage/inventory space matters because holding useful set pieces enables later upgrades.",
+            ],
+            "team_baseline": [
+                "Use durable frontline dwarves to protect damage dealers.",
+                "Maintain sustain through Priests or Supporters when fights start lasting longer.",
+                "Add crowd control or area damage as waves become denser.",
+                "Avoid spreading permanent upgrades too thin early; commit to a coherent damage/sustain plan.",
+            ],
+            "shopping": [
+                "Buy/equip weapons that define useful professions before buying low-synergy extras.",
+                "Prefer upgrades, set pieces, and role-defining items over random sidegrades.",
+                "Reroll when no useful buy/equip/upgrade action is available and gold allows it.",
+                "Advanced-profession set items and high-tier drops become relevant after shop progression.",
+            ],
+            "runes_and_talents": [
+                "Spend skill/rune points toward the current team plan instead of sprinkling points everywhere.",
+                "Target class-specific rune bonuses when a build leans heavily into one role.",
+                "Mage/fire builds, healer sustain builds, and formation-based comps all need matching runes.",
+            ],
+            "automation_translation": [
+                "When in doubt, choose actions that advance the battle loop: battle select, fight, next, continue, retry.",
+                "Avoid destructive actions such as retire, sell, reset, delete, or new clan unless explicitly planned.",
+                "If the bot can read or infer choices, favor battle progress over idle menu exploration.",
+                "Use video-derived state recognition for where to click; use wiki/guide baseline for what to prioritize once OCR exists.",
+            ],
+        },
         "professions": {
             "frontline": ["Knight", "Warrior"],
             "damage": ["Warrior", "Mage", "Archer", "Thief"],
             "support": ["Priest", "Supporter"],
+            "advanced_targets": ["Paladin", "Warpriest", "Warlock", "Reaper", "Cannoneer", "Beastmaster"],
             "baseline_priority": [
                 "Keep durable frontliners alive.",
                 "Prefer healing/support pieces when sustain is weak.",
@@ -198,9 +251,38 @@ def build_baseline(pages: list[dict[str, Any]]) -> dict[str, Any]:
         "item_set_priorities": {
             "s_tier": ["Djinn", "Golden", "Executioner", "Dragon", "White Reaver", "Umbra"],
             "a_tier": ["Dwarven", "Holy Authority", "Boar", "Crimson", "Night", "Titan", "Holy Smite"],
+            "role_targets": {
+                "tank": ["Golden", "Umbra"],
+                "healer": ["Djinn", "Druid", "Divine"],
+                "warrior": ["Executioner", "Titan", "Dwarven"],
+                "mage": ["Dragon", "Storm", "Frost"],
+                "thief": ["White Reaver", "Assassin", "Crescent"],
+                "supporter": ["Centurion"],
+            },
             "notes": [
                 "Prioritize complete set synergies over isolated low-impact pieces.",
                 "Executioner and Golden are useful baseline targets for early carry/tank logic.",
+                "Djinn/other healer sets are strong sustain targets when the team starts losing longer fights.",
+            ],
+        },
+        "known_build_archetypes": {
+            "balanced_core": [
+                "frontline tank",
+                "physical or magical damage carry",
+                "healer/support sustain",
+                "secondary crowd control or area damage",
+            ],
+            "mage_fire_core": [
+                "multiple mages",
+                "mana regeneration",
+                "fire damage/rage/hope style runes",
+                "intelligence and magic penetration gear",
+            ],
+            "sustain_core": [
+                "Golden or other durable tank setup",
+                "Djinn/healer sustain",
+                "support banner utility",
+                "damage carry protected by formation and healing",
             ],
         },
         "ui_priorities": {
