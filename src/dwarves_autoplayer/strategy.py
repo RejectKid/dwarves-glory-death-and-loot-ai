@@ -289,22 +289,26 @@ class KnowledgeStrategy:
         ]
 
     def _equip_drag_actions(self) -> list[StrategyActionSpec]:
+        equip_method = str(self.config.get("equip_method", "click_pair"))
         equip_targets = self.config.get("equip_targets", {})
         inventory_slots = self.config.get("inventory_slots", {}).get("row1", [])
-        front = equip_targets.get("front_dwarf", [0.840, 0.360])
-        damage = equip_targets.get("damage_dwarf", [0.935, 0.360])
+        dwarf_targets = self._ordered_targets(equip_targets, "dwarf_")
         actions: list[StrategyActionSpec] = []
-        for index, slot in enumerate(inventory_slots[:8], start=1):
-            target = front if index % 2 else damage
-            target_name = "front_dwarf" if index % 2 else "damage_dwarf"
+        if not inventory_slots:
+            return actions
+
+        for index, (target_name, target) in enumerate(dwarf_targets, start=1):
+            slot = inventory_slots[(index - 1) % len(inventory_slots)]
+            if len(slot) < 2 or len(target) < 2:
+                break
             actions.append(
                 StrategyActionSpec(
-                    f"equip_inventory_slot_{index}_to_{target_name}",
+                    f"equip_inventory_slot_{((index - 1) % len(inventory_slots)) + 1}_to_{target_name}",
                     float(slot[0]),
                     float(slot[1]),
                     1.0,
                     0.6,
-                    "drag",
+                    equip_method,
                     float(target[0]),
                     float(target[1]),
                 )
@@ -312,30 +316,44 @@ class KnowledgeStrategy:
         return actions
 
     def _relic_drag_actions(self) -> list[StrategyActionSpec]:
+        equip_method = str(self.config.get("equip_method", "click_pair"))
         relic_targets = self.config.get("relic_targets", {})
         inventory_slots = self.config.get("inventory_slots", {}).get("row1", [])
-        targets = [
-            ("front_relic_1", relic_targets.get("front_relic_1", [0.817, 0.485])),
-            ("front_relic_2", relic_targets.get("front_relic_2", [0.843, 0.485])),
-            ("damage_relic_1", relic_targets.get("damage_relic_1", [0.910, 0.485])),
-            ("damage_relic_2", relic_targets.get("damage_relic_2", [0.936, 0.485])),
-        ]
+        targets = self._ordered_targets(relic_targets, "dwarf_")
         actions: list[StrategyActionSpec] = []
-        for index, slot in enumerate(inventory_slots[:8], start=1):
-            target_name, target = targets[(index - 1) % len(targets)]
+        if not inventory_slots:
+            return actions
+
+        for index, (target_name, target) in enumerate(targets, start=1):
+            slot = inventory_slots[(index - 1) % len(inventory_slots)]
+            if len(slot) < 2 or len(target) < 2:
+                break
             actions.append(
                 StrategyActionSpec(
-                    f"equip_inventory_slot_{index}_to_{target_name}",
+                    f"equip_inventory_slot_{((index - 1) % len(inventory_slots)) + 1}_to_{target_name}",
                     float(slot[0]),
                     float(slot[1]),
                     1.0,
                     0.6,
-                    "drag",
+                    equip_method,
                     float(target[0]),
                     float(target[1]),
                 )
             )
         return actions
+
+    def _ordered_targets(self, targets: dict[str, Any], prefix: str) -> list[tuple[str, list[float]]]:
+        def sort_key(item: tuple[str, Any]) -> tuple[int, int]:
+            name = item[0]
+            parts = name.replace(prefix, "").split("_relic_")
+            try:
+                dwarf_index = int(parts[0])
+            except ValueError:
+                dwarf_index = 999
+            relic_index = int(parts[1]) if len(parts) > 1 and parts[1].isdigit() else 0
+            return dwarf_index, relic_index
+
+        return [(name, value) for name, value in sorted(targets.items(), key=sort_key) if name.startswith(prefix)]
 
     def _load_yaml(self, path: Path) -> dict[str, Any]:
         if not path.exists():

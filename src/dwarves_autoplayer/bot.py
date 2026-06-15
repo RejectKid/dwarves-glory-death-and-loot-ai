@@ -84,6 +84,30 @@ def drag_window_point(window, x: int, y: int, target_x: int, target_y: int, labe
     pyautogui.dragTo(end_x, end_y, duration=0.35, button="left")
 
 
+def click_pair_window_point(window, x: int, y: int, target_x: int, target_y: int, label: str) -> None:
+    start_x = window.left + x
+    start_y = window.top + y
+    end_x = window.left + target_x
+    end_y = window.top + target_y
+    logging.info(
+        "Click-pair %s source window=(%s,%s), screen=(%s,%s) target window=(%s,%s), screen=(%s,%s)",
+        label,
+        x,
+        y,
+        start_x,
+        start_y,
+        target_x,
+        target_y,
+        end_x,
+        end_y,
+    )
+    pyautogui.click(start_x, start_y)
+    time.sleep(0.18)
+    pyautogui.moveTo(end_x, end_y)
+    time.sleep(0.12)
+    pyautogui.click(end_x, end_y)
+
+
 class Bot:
     def __init__(self, config: dict[str, Any], print_mouse: bool = False, auto_start: bool = False) -> None:
         self.config = config
@@ -131,10 +155,13 @@ class Bot:
             if self.strategy.should_skip_for_tooltip(action.name, tooltip.text):
                 logging.info("Skipping action=%s after tooltip risk check", action.name)
                 return True
-        if action.action_type == "drag" and action.target_x_ratio is not None and action.target_y_ratio is not None:
+        if action.action_type in {"drag", "click_pair"} and action.target_x_ratio is not None and action.target_y_ratio is not None:
             target_x = int(window.width * action.target_x_ratio)
             target_y = int(window.height * action.target_y_ratio)
-            drag_window_point(window, x, y, target_x, target_y, action.name)
+            if action.action_type == "click_pair":
+                click_pair_window_point(window, x, y, target_x, target_y, action.name)
+            else:
+                drag_window_point(window, x, y, target_x, target_y, action.name)
         else:
             click_window_point(window, x, y, action.name)
         time.sleep(action.after_delay_seconds)
@@ -197,7 +224,7 @@ class Bot:
         if not config.get("enabled", True):
             return
 
-        if action.action_type == "drag" or action.name.startswith(("recruit_", "loot_", "forge_", "storage_", "tavern_", "equip_")):
+        if action.action_type in {"drag", "click_pair"} or action.name.startswith(("recruit_", "loot_", "forge_", "storage_", "tavern_", "equip_")):
             delay = float(config.get("risky_action_seconds", 1.6))
         elif action.name.startswith(("nav_recruit", "nav_loot", "nav_forge", "nav_storage", "nav_tavern", "nav_main_hall")):
             delay = float(config.get("economy_action_seconds", 1.2))
