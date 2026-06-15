@@ -33,6 +33,16 @@ class StrategyDecision:
     source_basis: list[str]
 
 
+@dataclass(frozen=True)
+class SmartEquipPlan:
+    target_name: str
+    target_x_ratio: float
+    target_y_ratio: float
+    kind: str
+    score: float
+    reasons: tuple[str, ...]
+
+
 class KnowledgeStrategy:
     def __init__(self, root: Path, config: dict[str, Any]) -> None:
         self.root = root
@@ -43,6 +53,7 @@ class KnowledgeStrategy:
         self.planner = BuildPlanner(self.baseline)
         self.macro_enabled = bool(self.config.get("economy_cycle_enabled", True))
         self.macro_index = 0
+        self.target_cursors: dict[str, int] = {}
         self.macro_sequence = self._build_macro_sequence()
 
     def summary(self) -> dict[str, Any]:
@@ -210,9 +221,9 @@ class KnowledgeStrategy:
         return supporting[0] if supporting else f"State {state} has been stable for {state_elapsed:.1f}s; use configured safe progression action."
 
     def _risks_for_action(self, action_name: str, state: str) -> list[str]:
-        risks = ["no OCR yet, so exact item/unit quality cannot be verified"]
+        risks = ["OCR quality controls whether item/unit choices can be trusted"]
         if action_name.startswith(("loot_", "forge_", "storage_", "recruit_", "tavern_", "equip_")):
-            risks.append("broad click may select a suboptimal item/unit or miss the intended button if OCR/tooltip text is unavailable")
+            risks.append("bot skips smart equip when tooltip text is missing or scores below threshold")
         if action_name.startswith("nav_raid"):
             risks.append("raid content may be harder than regular battles")
         if state == "battle_select":
@@ -277,8 +288,7 @@ class KnowledgeStrategy:
             StrategyActionSpec("storage_try_equip_left", 0.350, 0.500, 1.0, 0.5),
             StrategyActionSpec("storage_try_equip_center", 0.500, 0.500, 1.0, 0.5),
             StrategyActionSpec("nav_main_hall_for_equipping", nav["main_hall"], 0.955, 1.0, 0.8),
-            *self._equip_drag_actions(),
-            *self._relic_drag_actions(),
+            *self._smart_equip_actions(),
             StrategyActionSpec("nav_tavern", nav["tavern"], 0.955, 1.0, 0.8),
             StrategyActionSpec("tavern_try_middle", 0.500, 0.500, 1.0, 0.5),
             StrategyActionSpec("nav_main_hall", nav["main_hall"], 0.955, 1.0, 0.8),
@@ -288,59 +298,85 @@ class KnowledgeStrategy:
             StrategyActionSpec("nav_battle_again", nav["battle"], 0.955, 1.0, 0.8),
         ]
 
-    def _equip_drag_actions(self) -> list[StrategyActionSpec]:
-        equip_method = str(self.config.get("equip_method", "click_pair"))
+    def plan_smart_equip(self, tooltip_text: str) -> SmartEquipPlan | None:
+        if not tooltip_text:
+            return None
+
+        memory = self.memory.snapshot()
+        evaluation = self.planner.evaluate_tooltip(tooltip_text, memory)
+        min_score = float(self.config.get("min_equip_score", 2.0))
+        if evaluation.kind not in {"gear", "relic"} or evaluation.score < min_score:
+            return None
+
+        target = self._best_target_for_evaluation(evaluation.kind, evaluation.role_hint)
+        if target is None:
+            return None
+
+        target_name, coords = target
+        return SmartEquipPlan(
+            target_name=target_name,
+            target_x_ratio=float(coords[0]),
+            target_y_ratio=float(coords[1]),
+            kind=evaluation.kind,
+            score=evaluation.score,
+            reasons=evaluation.reasons,
+        )
+
+    def _smart_equip_actions(self) -> list[StrategyActionSpec]:
+        inventory_slots = self.config.get("inventory_slots", {}).get("row1", [])
+        actions: list[StrategyActionSpec] = []
+        for index, slot in enumerate(inventory_slots, start=1):
+            if len(slot) < 2:
+                break
+            actions.append(
+                StrategyActionSpec(
+                    f"equip_inventory_slot_{index}_smart",
+                    float(slot[0]),
+                    float(slot[1]),
+                    1.0,
+                    0.6,
+                    "smart_equip",
+                )
+            )
+        return actions
+
+    def _best_target_for_evaluation(self, kind: str, role_hint: str) -> tuple[str, list[float]] | None:
+        if kind == "relic":
+            return self._best_relic_target(role_hint)
+        return self._best_gear_target(role_hint)
+
+    def _best_gear_target(self, role_hint: str) -> tuple[str, list[float]] | None:
         equip_targets = self.config.get("equip_targets", {})
-        inventory_slots = self.config.get("inventory_slots", {}).get("row1", [])
-        dwarf_targets = self._ordered_targets(equip_targets, "dwarf_")
-        actions: list[StrategyActionSpec] = []
-        if not inventory_slots:
-            return actions
+        roles = self.config.get("dwarf_roles", {})
+        ordered_roles = self.planner.target_role_order(role_hint)
+        return self._first_target_by_role(equip_targets, roles, ordered_roles)
 
-        for index, (target_name, target) in enumerate(dwarf_targets, start=1):
-            slot = inventory_slots[(index - 1) % len(inventory_slots)]
-            if len(slot) < 2 or len(target) < 2:
-                break
-            actions.append(
-                StrategyActionSpec(
-                    f"equip_inventory_slot_{((index - 1) % len(inventory_slots)) + 1}_to_{target_name}",
-                    float(slot[0]),
-                    float(slot[1]),
-                    1.0,
-                    0.6,
-                    equip_method,
-                    float(target[0]),
-                    float(target[1]),
-                )
-            )
-        return actions
-
-    def _relic_drag_actions(self) -> list[StrategyActionSpec]:
-        equip_method = str(self.config.get("equip_method", "click_pair"))
+    def _best_relic_target(self, role_hint: str) -> tuple[str, list[float]] | None:
         relic_targets = self.config.get("relic_targets", {})
-        inventory_slots = self.config.get("inventory_slots", {}).get("row1", [])
-        targets = self._ordered_targets(relic_targets, "dwarf_")
-        actions: list[StrategyActionSpec] = []
-        if not inventory_slots:
-            return actions
+        roles = self.config.get("dwarf_roles", {})
+        ordered_roles = self.planner.target_role_order(role_hint)
+        return self._first_target_by_role(relic_targets, roles, ordered_roles, relic=True)
 
-        for index, (target_name, target) in enumerate(targets, start=1):
-            slot = inventory_slots[(index - 1) % len(inventory_slots)]
-            if len(slot) < 2 or len(target) < 2:
-                break
-            actions.append(
-                StrategyActionSpec(
-                    f"equip_inventory_slot_{((index - 1) % len(inventory_slots)) + 1}_to_{target_name}",
-                    float(slot[0]),
-                    float(slot[1]),
-                    1.0,
-                    0.6,
-                    equip_method,
-                    float(target[0]),
-                    float(target[1]),
-                )
-            )
-        return actions
+    def _first_target_by_role(
+        self,
+        targets: dict[str, Any],
+        roles: dict[str, str],
+        ordered_roles: list[str],
+        relic: bool = False,
+    ) -> tuple[str, list[float]] | None:
+        ordered_targets = self._ordered_targets(targets, "dwarf_")
+        for role in ordered_roles:
+            candidates = [
+                (target_name, coords)
+                for target_name, coords in ordered_targets
+                if roles.get(target_name.split("_relic_", maxsplit=1)[0] if relic else target_name, "flex") == role
+            ]
+            if candidates:
+                cursor_key = f"{'relic' if relic else 'gear'}:{role}"
+                cursor = self.target_cursors.get(cursor_key, 0)
+                self.target_cursors[cursor_key] = cursor + 1
+                return candidates[cursor % len(candidates)]
+        return ordered_targets[0] if ordered_targets else None
 
     def _ordered_targets(self, targets: dict[str, Any], prefix: str) -> list[tuple[str, list[float]]]:
         def sort_key(item: tuple[str, Any]) -> tuple[int, int]:

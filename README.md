@@ -109,19 +109,23 @@ It also runs an economy cycle through the bottom hotbar so the run does not only
 
 The menu positions are ratios in `config.yaml` under `strategy.bottom_menu`. The first version uses broad, safe clicks in those menus because OCR is not installed yet; the next upgrade should read menu text and item/unit names before buying or upgrading.
 
-Gear and relic/artifact equipping are part of the economy cycle now. After visiting storage/loot, the bot goes to `6` Main Hall and attempts equip actions from visible inventory slots onto dwarf cards and relic slots. The default equip method is click item, move to dwarf/relic slot, click again. Before each equip action, it hovers the source slot and captures/reads the tooltip when OCR is available.
+Gear and relic/artifact equipping are part of the economy cycle now. After visiting storage/loot, the bot goes to `6` Main Hall and inspects visible inventory slots. It no longer blindly walks down the row. For each slot, it hovers, reads the tooltip with OCR, classifies the item as gear or relic/artifact, scores it against the current build plan, and only equips it if it clears `strategy.min_equip_score`.
+
+Gear is placed by clicking the item and then clicking the target dwarf card. Relics/artifacts are placed by clicking the item and then clicking one of the two relic boxes below the selected dwarf.
 
 Tune drop targets in `config.yaml`:
 
 ```yaml
 strategy:
   equip_method: "click_pair"
+  min_equip_score: 2.0
+  dwarf_roles:
   equip_targets:
   relic_targets:
   inventory_slots:
 ```
 
-There are target entries for up to 10 dwarves and two relic slots per dwarf.
+There are gear target entries for up to 10 dwarves and two relic target boxes per dwarf. `dwarf_roles` controls who receives tank, carry, healer, support, magic, or flex items first. If OCR cannot read a tooltip, smart equip skips the slot instead of risking a bad click.
 
 The knowledge baseline currently informs the bot at the policy level: favor battle-loop progress, avoid destructive menus, keep fights moving, and treat shopping/build strategy as a next OCR-driven upgrade. The bot logs how many sources and video samples it loaded at startup.
 

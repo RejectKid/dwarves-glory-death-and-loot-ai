@@ -155,6 +155,27 @@ class Bot:
             if self.strategy.should_skip_for_tooltip(action.name, tooltip.text):
                 logging.info("Skipping action=%s after tooltip risk check", action.name)
                 return True
+        if action.action_type == "smart_equip":
+            if not tooltip or not tooltip.text:
+                logging.info("Skipping smart equip action=%s because no tooltip text was readable", action.name)
+                return True
+            plan = self.strategy.plan_smart_equip(tooltip.text)
+            if plan is None:
+                logging.info("Skipping smart equip action=%s because item did not match the current build plan", action.name)
+                return True
+            target_x = int(window.width * plan.target_x_ratio)
+            target_y = int(window.height * plan.target_y_ratio)
+            logging.info(
+                "Smart equip action=%s kind=%s target=%s score=%.2f reasons=%s",
+                action.name,
+                plan.kind,
+                plan.target_name,
+                plan.score,
+                " | ".join(plan.reasons) or "none",
+            )
+            click_pair_window_point(window, x, y, target_x, target_y, f"{action.name}_to_{plan.target_name}")
+            time.sleep(action.after_delay_seconds)
+            return True
         if action.action_type in {"drag", "click_pair"} and action.target_x_ratio is not None and action.target_y_ratio is not None:
             target_x = int(window.width * action.target_x_ratio)
             target_y = int(window.height * action.target_y_ratio)
@@ -224,7 +245,7 @@ class Bot:
         if not config.get("enabled", True):
             return
 
-        if action.action_type in {"drag", "click_pair"} or action.name.startswith(("recruit_", "loot_", "forge_", "storage_", "tavern_", "equip_")):
+        if action.action_type in {"drag", "click_pair", "smart_equip"} or action.name.startswith(("recruit_", "loot_", "forge_", "storage_", "tavern_", "equip_")):
             delay = float(config.get("risky_action_seconds", 1.6))
         elif action.name.startswith(("nav_recruit", "nav_loot", "nav_forge", "nav_storage", "nav_tavern", "nav_main_hall")):
             delay = float(config.get("economy_action_seconds", 1.2))

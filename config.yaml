@@ -36,6 +36,7 @@ strategy:
   # battle card and rotate if the screen does not change.
   economy_cycle_enabled: true
   equip_method: "click_pair"
+  min_equip_score: 2.0
   battle_card_preference: "center_left_right"
   bottom_menu:
     tavern_3: 0.347
@@ -57,6 +58,17 @@ strategy:
     dwarf_8: [0.785, 0.300]
     dwarf_9: [0.840, 0.360]
     dwarf_10: [0.935, 0.360]
+  dwarf_roles:
+    dwarf_1: "frontline"
+    dwarf_2: "frontline"
+    dwarf_3: "carry"
+    dwarf_4: "carry"
+    dwarf_5: "healer"
+    dwarf_6: "support"
+    dwarf_7: "magic_carry"
+    dwarf_8: "flex"
+    dwarf_9: "flex"
+    dwarf_10: "flex"
   relic_targets:
     dwarf_1_relic_1: [0.055, 0.485]
     dwarf_1_relic_2: [0.085, 0.485]
