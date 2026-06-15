@@ -89,12 +89,13 @@ class Bot:
         screen = screenshot_window(window)
         state = self.playbook.classify(screen)
         action = self.playbook.choose_action(screen)
-        self.recorder.observe(screen, state.value, action.name if action else None)
+        self.recorder.observe(screen, state.value, action.name if action else None, action.goal if action else None)
 
         if not action:
             logging.info("No strategy action for state=%s", state.value)
             return False
 
+        self.log_decision(state.value, action)
         x = int(window.width * action.x_ratio)
         y = int(window.height * action.y_ratio)
         click_window_point(window, x, y, action.name)
@@ -138,6 +139,16 @@ class Bot:
         logging.info("Screenshots/timeline go to %s", self.recorder.data_dir)
         logging.info("Press %s to start/pause. Press %s to quit.", self.config["hotkeys"]["toggle"], self.config["hotkeys"]["quit"])
 
+    def log_decision(self, state: str, action) -> None:
+        logging.info("Decision state=%s action=%s goal=%s", state, action.name, action.goal)
+        logging.info("Decision rationale: %s", action.rationale)
+        if action.build_priorities:
+            logging.info("Decision build priorities: %s", " | ".join(action.build_priorities))
+        if action.risks:
+            logging.info("Decision risks: %s", " | ".join(action.risks))
+        if action.source_basis:
+            logging.info("Decision source basis: %s", " | ".join(action.source_basis))
+
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
@@ -156,4 +167,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

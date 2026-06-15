@@ -9,7 +9,7 @@ from typing import Any
 import cv2
 import numpy as np
 
-from dwarves_autoplayer.strategy import KnowledgeStrategy, StrategyActionSpec
+from dwarves_autoplayer.strategy import KnowledgeStrategy, StrategyDecision
 
 
 class GameState(str, Enum):
@@ -28,6 +28,11 @@ class PlaybookAction:
     y_ratio: float
     cooldown_seconds: float
     after_delay_seconds: float = 0.75
+    goal: str = ""
+    rationale: str = ""
+    risks: tuple[str, ...] = ()
+    build_priorities: tuple[str, ...] = ()
+    source_basis: tuple[str, ...] = ()
 
 
 class DwarvesPlaybook:
@@ -80,9 +85,10 @@ class DwarvesPlaybook:
         specs = self.strategy.actions_for_state(state.value, state_elapsed)
         if not specs:
             return None
+        decisions = [self.strategy.consult(state.value, state_elapsed, spec) for spec in specs]
         return self._rotate(
             state,
-            [self._to_playbook_action(spec) for spec in specs],
+            [self._to_playbook_action(decision) for decision in decisions],
             force_rotate=state_elapsed > self.strategy.force_rotate_after(state.value),
         )
 
@@ -94,13 +100,19 @@ class DwarvesPlaybook:
         self.state_action_index[state] = index + 1
         return action
 
-    def _to_playbook_action(self, spec: StrategyActionSpec) -> PlaybookAction:
+    def _to_playbook_action(self, decision: StrategyDecision) -> PlaybookAction:
+        spec = decision.action
         return PlaybookAction(
             name=spec.name,
             x_ratio=spec.x_ratio,
             y_ratio=spec.y_ratio,
             cooldown_seconds=spec.cooldown_seconds,
             after_delay_seconds=spec.after_delay_seconds,
+            goal=decision.goal,
+            rationale=decision.rationale,
+            risks=tuple(decision.risks),
+            build_priorities=tuple(decision.build_priorities),
+            source_basis=tuple(decision.source_basis),
         )
 
     def _looks_like_main_hall(self, screen: np.ndarray) -> bool:

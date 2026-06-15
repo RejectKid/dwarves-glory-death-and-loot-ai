@@ -111,6 +111,16 @@ The menu positions are ratios in `config.yaml` under `strategy.bottom_menu`. The
 
 The knowledge baseline currently informs the bot at the policy level: favor battle-loop progress, avoid destructive menus, keep fights moving, and treat shopping/build strategy as a next OCR-driven upgrade. The bot logs how many sources and video samples it loaded at startup.
 
+Before every click, the bot now creates a strategy decision with:
+
+- goal
+- rationale
+- risks
+- build priorities
+- source basis from wiki/guide/Reddit/Steam/video training
+
+Those decisions are written to `bot.log`, and the runtime timeline includes each action goal.
+
 ## Diagnose
 
 If the bot stalls:

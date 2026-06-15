@@ -43,6 +43,20 @@ def main() -> None:
         print(f"action: {action.name}")
         print(f"click: x={int(width * action.x_ratio)} y={int(height * action.y_ratio)}")
         print(f"cooldown: {action.cooldown_seconds}s")
+        print(f"goal: {action.goal}")
+        print(f"rationale: {action.rationale}")
+        if action.build_priorities:
+            print("build_priorities:")
+            for item in action.build_priorities:
+                print(f"  - {item}")
+        if action.risks:
+            print("risks:")
+            for item in action.risks:
+                print(f"  - {item}")
+        if action.source_basis:
+            print("source_basis:")
+            for item in action.source_basis:
+                print(f"  - {item}")
     else:
         print("action: none")
 

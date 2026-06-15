@@ -36,7 +36,7 @@ class ScreenRecorder:
                 value = 0
         return "".join(chars)
 
-    def observe(self, screen: np.ndarray, state: str, action: str | None) -> str:
+    def observe(self, screen: np.ndarray, state: str, action: str | None, goal: str | None = None) -> str:
         screen_id = self.fingerprint(screen)
         if not self.enabled:
             return screen_id
@@ -47,13 +47,13 @@ class ScreenRecorder:
             path = self.screenshot_dir / f"{int(time.time())}_{state}_{screen_id[:12]}.png"
             cv2.imwrite(str(path), screen)
 
-        self._append_timeline(screen_id, state, action)
+        self._append_timeline(screen_id, state, action, goal)
         return screen_id
 
-    def _append_timeline(self, screen_id: str, state: str, action: str | None) -> None:
+    def _append_timeline(self, screen_id: str, state: str, action: str | None, goal: str | None) -> None:
         exists = self.timeline_path.exists()
         with self.timeline_path.open("a", newline="", encoding="utf-8") as handle:
-            writer = csv.DictWriter(handle, fieldnames=["time", "screen_id", "state", "action"])
+            writer = csv.DictWriter(handle, fieldnames=["time", "screen_id", "state", "action", "goal"])
             if not exists:
                 writer.writeheader()
             writer.writerow(
@@ -62,6 +62,6 @@ class ScreenRecorder:
                     "screen_id": screen_id,
                     "state": state,
                     "action": action or "",
+                    "goal": goal or "",
                 }
             )
-

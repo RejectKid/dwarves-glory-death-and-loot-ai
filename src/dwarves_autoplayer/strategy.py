@@ -18,6 +18,17 @@ class StrategyActionSpec:
     after_delay_seconds: float = 0.75
 
 
+@dataclass(frozen=True)
+class StrategyDecision:
+    state: str
+    action: StrategyActionSpec
+    goal: str
+    rationale: str
+    risks: list[str]
+    build_priorities: list[str]
+    source_basis: list[str]
+
+
 class KnowledgeStrategy:
     def __init__(self, root: Path, config: dict[str, Any]) -> None:
         self.root = root
@@ -64,6 +75,17 @@ class KnowledgeStrategy:
 
         return []
 
+    def consult(self, state: str, state_elapsed: float, action: StrategyActionSpec) -> StrategyDecision:
+        return StrategyDecision(
+            state=state,
+            action=action,
+            goal=self._goal_for_action(action.name, state),
+            rationale=self._rationale_for_action(action.name, state, state_elapsed),
+            risks=self._risks_for_action(action.name, state),
+            build_priorities=self._build_priorities_for_action(action.name, state),
+            source_basis=self._source_basis_for_state(state),
+        )
+
     def note_action_chosen(self, action_name: str, state: str) -> None:
         if not self.macro_enabled:
             return
@@ -95,6 +117,80 @@ class KnowledgeStrategy:
             "right_center_left": ["right", "center", "left"],
         }
         return [cards[name] for name in orders.get(preference, orders["center_left_right"])]
+
+    def _goal_for_action(self, action_name: str, state: str) -> str:
+        if action_name.startswith("nav_recruit") or action_name.startswith("recruit_"):
+            return "increase roster size and role coverage"
+        if action_name.startswith("nav_loot") or action_name.startswith("loot_"):
+            return "buy or equip gear that improves profession/build power"
+        if action_name.startswith("nav_forge") or action_name.startswith("forge_"):
+            return "upgrade useful gear before pushing harder fights"
+        if action_name.startswith("nav_storage") or action_name.startswith("storage_"):
+            return "equip stored gear and preserve set-building options"
+        if action_name.startswith("nav_tavern") or action_name.startswith("tavern_"):
+            return "check long-term run/economy upgrades"
+        if "battle" in action_name or state == "battle_select":
+            return "advance the battle loop for gold, experience, and rewards"
+        if state == "battle_report":
+            return "claim rewards and return to run management"
+        return "continue safe autonomous progression"
+
+    def _rationale_for_action(self, action_name: str, state: str, state_elapsed: float) -> str:
+        strategy = self.baseline.get("strategy_model", {})
+        automation = strategy.get("automation_translation", [])
+        shopping = strategy.get("shopping", [])
+        early = strategy.get("early_game", [])
+
+        if state == "battle_select":
+            return "Video baseline shows battle cards as the normal transition into combat; baseline policy favors battle-loop progress when no OCR choice is available."
+        if action_name.startswith(("nav_recruit", "recruit_")):
+            return "Strategy baseline says early runs need enough dwarves and role coverage before loot optimization."
+        if action_name.startswith(("nav_loot", "loot_", "nav_storage", "storage_", "nav_forge", "forge_")):
+            return "Strategy baseline prioritizes buy/equip/upgrade actions and set-piece preservation before harder fights."
+        if state == "battle_running":
+            return "Battle is automated by the game; keeping speed high improves loop throughput while waiting for report/reward screens."
+        if state == "battle_report":
+            return "Rewards must be claimed to return to economy and battle selection."
+
+        supporting = automation[:1] or early[:1] or shopping[:1]
+        return supporting[0] if supporting else f"State {state} has been stable for {state_elapsed:.1f}s; use configured safe progression action."
+
+    def _risks_for_action(self, action_name: str, state: str) -> list[str]:
+        risks = ["no OCR yet, so exact item/unit quality cannot be verified"]
+        if action_name.startswith(("loot_", "forge_", "storage_", "recruit_", "tavern_")):
+            risks.append("broad click may select a suboptimal item/unit or miss the intended button")
+        if action_name.startswith("nav_raid"):
+            risks.append("raid content may be harder than regular battles")
+        if state == "battle_select":
+            risks.append("battle card difficulty/reward is not read yet")
+        return risks
+
+    def _build_priorities_for_action(self, action_name: str, state: str) -> list[str]:
+        sets = self.baseline.get("item_set_priorities", {})
+        professions = self.baseline.get("professions", {})
+        strategy = self.baseline.get("strategy_model", {})
+        priorities = []
+
+        if action_name.startswith(("nav_recruit", "recruit_")):
+            priorities.extend(professions.get("baseline_priority", [])[:3])
+        elif action_name.startswith(("nav_loot", "loot_", "nav_forge", "forge_", "nav_storage", "storage_")):
+            priorities.extend(sets.get("notes", [])[:2])
+            priorities.append("target S-tier sets: " + ", ".join(sets.get("s_tier", [])[:6]))
+        elif state in {"battle_select", "battle_running", "battle_report"}:
+            priorities.extend(strategy.get("early_game", [])[:2])
+        else:
+            priorities.extend(strategy.get("team_baseline", [])[:2])
+
+        return [item for item in priorities if item]
+
+    def _source_basis_for_state(self, state: str) -> list[str]:
+        coverage = self.baseline.get("source_coverage", {})
+        video_samples = self.video_baseline.get("total_samples", 0)
+        return [
+            f"{sum(coverage.values())} web/wiki/reddit/Steam sources",
+            f"{video_samples} sampled tutorial-video frames",
+            f"state={state}",
+        ]
 
     def _build_macro_sequence(self) -> list[StrategyActionSpec]:
         configured_nav = self.config.get("bottom_menu", {})
