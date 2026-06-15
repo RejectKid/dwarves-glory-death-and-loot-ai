@@ -18,6 +18,7 @@ dependencies = [
   "pygetwindow",
   "requests",
   "beautifulsoup4",
+  "pytesseract",
 ]
 
 [project.scripts]

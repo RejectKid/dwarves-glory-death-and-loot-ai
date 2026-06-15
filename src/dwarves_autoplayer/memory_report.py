@@ -24,6 +24,10 @@ def main() -> None:
     for item in planner.gear_targets(memory):
         print(f"  - {item}")
 
+    print("recent_tooltips:")
+    for item in memory.tooltip_text_seen[-10:]:
+        print(f"  - {item}")
+
 
 if __name__ == "__main__":
     main()

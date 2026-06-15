@@ -99,6 +99,46 @@ class KnowledgeStrategy:
         if action_name == current.name and state in {"main_hall", "shop_menu", "unknown"}:
             self.macro_index = (self.macro_index + 1) % len(self.macro_sequence)
 
+    def should_probe_tooltip(self, action_name: str) -> bool:
+        return action_name.startswith(
+            (
+                "recruit_",
+                "loot_",
+                "forge_",
+                "storage_",
+                "tavern_",
+                "nav_recruit",
+                "nav_loot",
+                "nav_forge",
+                "nav_storage",
+            )
+        )
+
+    def note_tooltip(self, action_name: str, text: str) -> None:
+        self.memory.note_tooltip(text)
+
+    def should_skip_for_tooltip(self, action_name: str, text: str) -> bool:
+        lowered = text.lower()
+        avoid_words = self.baseline.get("ui_priorities", {}).get("avoid", [])
+        hard_avoid = set(avoid_words) | {"sell", "delete", "retire", "reset", "remove", "discard", "new clan"}
+        return any(word in lowered for word in hard_avoid)
+
+    def tooltip_matches_priorities(self, text: str) -> list[str]:
+        lowered = text.lower()
+        matches: list[str] = []
+        sets = self.baseline.get("item_set_priorities", {})
+        for set_name in sets.get("s_tier", []) + sets.get("a_tier", []):
+            if set_name.lower() in lowered:
+                matches.append(f"set target: {set_name}")
+        for role, role_sets in sets.get("role_targets", {}).items():
+            for set_name in role_sets:
+                if set_name.lower() in lowered:
+                    matches.append(f"{role} set target: {set_name}")
+        for profession in self.baseline.get("professions", {}).get("advanced_targets", []):
+            if profession.lower() in lowered:
+                matches.append(f"advanced profession target: {profession}")
+        return matches
+
     def force_rotate_after(self, state: str) -> float:
         return {
             "main_hall": 8.0,
@@ -152,7 +192,7 @@ class KnowledgeStrategy:
         if action_name.startswith(("nav_recruit", "recruit_")):
             return "Strategy baseline says early runs need enough dwarves and role coverage before loot optimization."
         if action_name.startswith(("nav_loot", "loot_", "nav_storage", "storage_", "nav_forge", "forge_")):
-            return "Strategy baseline prioritizes buy/equip/upgrade actions and set-piece preservation before harder fights."
+            return "Strategy baseline prioritizes buy/equip/upgrade actions and set-piece preservation before harder fights; tooltips are probed before risky gear clicks."
         if state == "battle_running":
             return "Battle is automated by the game; keeping speed high improves loop throughput while waiting for report/reward screens."
         if state == "battle_report":
@@ -164,7 +204,7 @@ class KnowledgeStrategy:
     def _risks_for_action(self, action_name: str, state: str) -> list[str]:
         risks = ["no OCR yet, so exact item/unit quality cannot be verified"]
         if action_name.startswith(("loot_", "forge_", "storage_", "recruit_", "tavern_")):
-            risks.append("broad click may select a suboptimal item/unit or miss the intended button")
+            risks.append("broad click may select a suboptimal item/unit or miss the intended button if OCR/tooltip text is unavailable")
         if action_name.startswith("nav_raid"):
             risks.append("raid content may be harder than regular battles")
         if state == "battle_select":

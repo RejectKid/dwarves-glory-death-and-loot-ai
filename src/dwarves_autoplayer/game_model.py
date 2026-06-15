@@ -31,6 +31,7 @@ class RunMemory:
     gold: int = 0
     units: list[Unit] = field(default_factory=list)
     gear_seen: list[GearItem] = field(default_factory=list)
+    tooltip_text_seen: list[str] = field(default_factory=list)
     chosen_build: str = "balanced_core"
     updated_at: float = field(default_factory=time.time)
 
@@ -58,6 +59,7 @@ class GameMemory:
                 gold=int(data.get("gold", 0)),
                 units=[Unit(**item) for item in data.get("units", [])],
                 gear_seen=[GearItem(**item) for item in data.get("gear_seen", [])],
+                tooltip_text_seen=[str(item) for item in data.get("tooltip_text_seen", [])],
                 chosen_build=str(data.get("chosen_build", "balanced_core")),
                 updated_at=float(data.get("updated_at", time.time())),
             )
@@ -66,6 +68,16 @@ class GameMemory:
 
     def _save(self) -> None:
         self.path.write_text(json.dumps(asdict(self.memory), indent=2, sort_keys=True), encoding="utf-8")
+
+    def note_tooltip(self, text: str) -> None:
+        cleaned = " ".join(text.split())
+        if not cleaned:
+            return
+        if cleaned not in self.memory.tooltip_text_seen:
+            self.memory.tooltip_text_seen.append(cleaned)
+            self.memory.tooltip_text_seen = self.memory.tooltip_text_seen[-200:]
+        self.memory.updated_at = time.time()
+        self._save()
 
 
 class BuildPlanner:
@@ -112,4 +124,3 @@ class BuildPlanner:
                 "prefer set pieces over isolated filler gear",
             ]
         return []
-

@@ -16,6 +16,11 @@ screen_recorder:
   data_dir: "learning_data"
   screenshot_interval_seconds: 3.0
 
+tooltip_reader:
+  enabled: true
+  data_dir: "learning_data/tooltips"
+  hover_seconds: 0.45
+
 state_playbook:
   enabled: true
 

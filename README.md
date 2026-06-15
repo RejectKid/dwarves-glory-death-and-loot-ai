@@ -136,6 +136,16 @@ Inspect memory and current build targets with:
 .\memory_report.bat
 ```
 
+Most game items and menus expose useful tooltip text. The bot now hovers before risky recruit/loot/storage/forge clicks, saves tooltip crops under `learning_data\tooltips\`, and uses OCR when available.
+
+Python installs `pytesseract`, but Windows also needs the Tesseract OCR application installed separately for text extraction. If Tesseract is missing, the bot still saves tooltip images and logs that OCR is unavailable.
+
+Install Tesseract on Windows and make sure `tesseract.exe` is on `PATH`. Common install options include the UB Mannheim Windows build or a package manager install. After installing, restart PowerShell and verify:
+
+```powershell
+tesseract --version
+```
+
 ## Diagnose
 
 If the bot stalls:

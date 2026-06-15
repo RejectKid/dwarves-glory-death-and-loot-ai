@@ -17,6 +17,7 @@ import yaml
 from dwarves_autoplayer.playbook import DwarvesPlaybook
 from dwarves_autoplayer.recorder import ScreenRecorder
 from dwarves_autoplayer.strategy import KnowledgeStrategy
+from dwarves_autoplayer.tooltip_reader import TooltipReader
 
 
 ROOT = Path.cwd()
@@ -71,6 +72,7 @@ class Bot:
         self.strategy = KnowledgeStrategy(ROOT, config)
         self.playbook = DwarvesPlaybook(config, self.strategy)
         self.recorder = ScreenRecorder(ROOT, config)
+        self.tooltip_reader = TooltipReader(ROOT, config)
 
     def install_hotkeys(self) -> None:
         hotkeys = self.config.get("hotkeys", {})
@@ -98,6 +100,15 @@ class Bot:
         self.log_decision(state.value, action)
         x = int(window.width * action.x_ratio)
         y = int(window.height * action.y_ratio)
+        tooltip = self.tooltip_reader.read_after_hover(window, x, y, action.name) if self.strategy.should_probe_tooltip(action.name) else None
+        if tooltip and tooltip.text:
+            self.strategy.note_tooltip(action.name, tooltip.text)
+            matches = self.strategy.tooltip_matches_priorities(tooltip.text)
+            if matches:
+                logging.info("Tooltip priority matches: %s", " | ".join(matches))
+            if self.strategy.should_skip_for_tooltip(action.name, tooltip.text):
+                logging.info("Skipping action=%s after tooltip risk check", action.name)
+                return True
         click_window_point(window, x, y, action.name)
         time.sleep(action.after_delay_seconds)
         return True
@@ -138,6 +149,9 @@ class Bot:
         logging.info("Video training samples: %s", summary["video_samples"])
         logging.info("Video state baseline: %s", summary["video_states"])
         logging.info("State playbook enabled: %s", self.playbook.enabled)
+        logging.info("Tooltip OCR available: %s", self.tooltip_reader.ocr_available)
+        if not self.tooltip_reader.ocr_available:
+            logging.info("Tesseract OCR engine is unavailable; tooltip crops will still be saved for later review")
         logging.info("Screenshots/timeline go to %s", self.recorder.data_dir)
         logging.info("Press %s to start/pause. Press %s to quit.", self.config["hotkeys"]["toggle"], self.config["hotkeys"]["quit"])
 
