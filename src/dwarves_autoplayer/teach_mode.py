@@ -19,6 +19,7 @@ import keyboard
 import numpy as np
 
 from dwarves_autoplayer.bot import CONFIG_PATH, ROOT, find_game_window, load_config, screenshot_window
+from dwarves_autoplayer.perception import PerceptionEngine
 from dwarves_autoplayer.playbook import DwarvesPlaybook
 from dwarves_autoplayer.screen_features import fingerprint
 from dwarves_autoplayer.strategy import KnowledgeStrategy
@@ -81,15 +82,23 @@ class TeachModeRecorder:
         self.events_path = self.data_dir / "events.csv"
         self.sample_interval = float(teach_config.get("screenshot_interval_seconds", 2.0))
         self.after_click_delay = float(teach_config.get("after_click_delay_seconds", 0.45))
+        self.hover_enabled = bool(teach_config.get("hover_capture_enabled", True))
+        self.hover_stable_seconds = float(teach_config.get("hover_stable_seconds", 1.1))
+        self.hover_min_interval = float(teach_config.get("hover_min_interval_seconds", 3.0))
+        self.label_hotkeys = dict(teach_config.get("label_hotkeys", {}))
         self.ocr = DemoOcrReader(bool(teach_config.get("ocr_enabled", True)))
         self.title_parts = config.get("window_title_contains", ["Dwarves"])
         self.playbook = DwarvesPlaybook(config, KnowledgeStrategy(ROOT, config))
+        self.perception = PerceptionEngine(ROOT, config)
         self.click_queue: queue.Queue[ClickEvent] = queue.Queue()
         self.quit_requested = False
         self.paused = False
         self.last_sample_at = 0.0
         self.event_index = 0
         self.last_mouse_pressed = {"left": False, "right": False, "middle": False}
+        self.last_cursor_position: tuple[int, int] | None = None
+        self.cursor_stable_since = time.monotonic()
+        self.last_hover_capture_at = 0.0
 
         self.screenshot_dir.mkdir(parents=True, exist_ok=True)
         self.data_dir.mkdir(parents=True, exist_ok=True)
@@ -107,6 +116,7 @@ class TeachModeRecorder:
                 self._poll_mouse_clicks()
                 self._process_click_queue()
                 self._sample_screen_if_due()
+                self._capture_hover_if_due()
                 time.sleep(0.03)
         finally:
             logging.info("Teach session finished: %s", self.events_path)
@@ -115,6 +125,8 @@ class TeachModeRecorder:
         hotkeys = self.config.get("hotkeys", {})
         keyboard.add_hotkey(hotkeys.get("toggle", "ctrl+alt+s"), self._toggle_pause)
         keyboard.add_hotkey(hotkeys.get("quit", "ctrl+alt+q"), self._quit)
+        for hotkey, label in self.label_hotkeys.items():
+            keyboard.add_hotkey(str(hotkey), lambda value=str(label): self._record_label(value))
 
     def _poll_mouse_clicks(self) -> None:
         button_codes = {"left": 0x01, "right": 0x02, "middle": 0x04}
@@ -159,12 +171,14 @@ class TeachModeRecorder:
         if not window:
             return
         screen = screenshot_window(window)
-        state = self.playbook.classify(screen).value
-        screen_id = fingerprint(screen)
+        observation = self.perception.observe(screen, self.playbook.classify(screen).value)
+        state = observation.state
+        screen_id = observation.screen_id
         image_path = self._save_screen(screen, f"sample_{state}_{screen_id[:12]}")
         self._append_event(
             {
                 "event_type": "sample",
+                "label": "",
                 "button": "",
                 "screen_x": "",
                 "screen_y": "",
@@ -178,7 +192,12 @@ class TeachModeRecorder:
                 "screen_id_after": screen_id,
                 "image_before": image_path,
                 "image_after": image_path,
-                "ocr_text": "",
+                "tooltip_image": "",
+                "tooltip_text": "",
+                "ocr_text": observation.ocr_text,
+                "state_source": observation.state_source,
+                "state_confidence": observation.state_confidence,
+                "visible_keywords": "|".join(observation.visible_keywords),
             }
         )
 
@@ -188,19 +207,22 @@ class TeachModeRecorder:
             return
 
         before = screenshot_window(window)
-        state_before = self.playbook.classify(before).value
-        before_id = fingerprint(before)
+        observation_before = self.perception.observe(before, self.playbook.classify(before).value)
+        state_before = observation_before.state
+        before_id = observation_before.screen_id
         before_path = self._save_screen(before, f"click_before_{state_before}_{before_id[:12]}")
         time.sleep(self.after_click_delay)
         after = screenshot_window(window)
-        state_after = self.playbook.classify(after).value
-        after_id = fingerprint(after)
+        observation_after = self.perception.observe(after, self.playbook.classify(after).value)
+        state_after = observation_after.state
+        after_id = observation_after.screen_id
         after_path = self._save_screen(after, f"click_after_{state_after}_{after_id[:12]}")
 
         window_x = event.x - window.left
         window_y = event.y - window.top
         row = {
             "event_type": "click",
+            "label": "",
             "button": event.button,
             "screen_x": event.x,
             "screen_y": event.y,
@@ -214,7 +236,12 @@ class TeachModeRecorder:
             "screen_id_after": after_id,
             "image_before": before_path,
             "image_after": after_path,
-            "ocr_text": self.ocr.read(before),
+            "tooltip_image": "",
+            "tooltip_text": "",
+            "ocr_text": observation_before.ocr_text or self.ocr.read(before),
+            "state_source": observation_before.state_source,
+            "state_confidence": observation_before.state_confidence,
+            "visible_keywords": "|".join(observation_before.visible_keywords),
         }
         self._append_event(row)
         logging.info(
@@ -224,6 +251,104 @@ class TeachModeRecorder:
             row["x_ratio"],
             row["y_ratio"],
         )
+
+    def _capture_hover_if_due(self) -> None:
+        if self.paused or not self.hover_enabled:
+            return
+        window = find_game_window(self.title_parts)
+        if not window:
+            return
+        x, y = self._cursor_position()
+        if not self._inside_window(window, x, y):
+            self.last_cursor_position = None
+            self.cursor_stable_since = time.monotonic()
+            return
+
+        now = time.monotonic()
+        if self.last_cursor_position is None or abs(x - self.last_cursor_position[0]) > 4 or abs(y - self.last_cursor_position[1]) > 4:
+            self.last_cursor_position = (x, y)
+            self.cursor_stable_since = now
+            return
+
+        if now - self.cursor_stable_since < self.hover_stable_seconds:
+            return
+        if now - self.last_hover_capture_at < self.hover_min_interval:
+            return
+
+        self.last_hover_capture_at = now
+        screen = screenshot_window(window)
+        observation = self.perception.observe(screen, self.playbook.classify(screen).value)
+        window_x = x - window.left
+        window_y = y - window.top
+        crop = self.perception.tooltip_crop(screen, window_x, window_y)
+        tooltip_text = self.perception.ocr_image(crop)
+        tooltip_path = self._save_screen(crop, f"hover_tooltip_{observation.state}_{observation.screen_id[:12]}")
+        screen_path = self._save_screen(screen, f"hover_screen_{observation.state}_{observation.screen_id[:12]}")
+        self._append_event(
+            {
+                "event_type": "hover",
+                "label": "tooltip_hover",
+                "button": "",
+                "screen_x": x,
+                "screen_y": y,
+                "window_x": window_x,
+                "window_y": window_y,
+                "x_ratio": round(window_x / max(window.width, 1), 5),
+                "y_ratio": round(window_y / max(window.height, 1), 5),
+                "state_before": observation.state,
+                "state_after": observation.state,
+                "screen_id_before": observation.screen_id,
+                "screen_id_after": observation.screen_id,
+                "image_before": screen_path,
+                "image_after": screen_path,
+                "tooltip_image": tooltip_path,
+                "tooltip_text": tooltip_text,
+                "ocr_text": observation.ocr_text,
+                "state_source": observation.state_source,
+                "state_confidence": observation.state_confidence,
+                "visible_keywords": "|".join(observation.visible_keywords),
+            }
+        )
+        logging.info("Recorded hover state=%s tooltip_text=%s", observation.state, tooltip_text or "unreadable")
+
+    def _record_label(self, label: str) -> None:
+        if self.paused:
+            return
+        window = find_game_window(self.title_parts)
+        if not window:
+            return
+        screen = screenshot_window(window)
+        observation = self.perception.observe(screen, self.playbook.classify(screen).value)
+        x, y = self._cursor_position()
+        window_x = x - window.left
+        window_y = y - window.top
+        image_path = self._save_screen(screen, f"label_{label}_{observation.state}_{observation.screen_id[:12]}")
+        self._append_event(
+            {
+                "event_type": "label",
+                "label": label,
+                "button": "",
+                "screen_x": x,
+                "screen_y": y,
+                "window_x": window_x,
+                "window_y": window_y,
+                "x_ratio": round(window_x / max(window.width, 1), 5),
+                "y_ratio": round(window_y / max(window.height, 1), 5),
+                "state_before": observation.state,
+                "state_after": observation.state,
+                "screen_id_before": observation.screen_id,
+                "screen_id_after": observation.screen_id,
+                "image_before": image_path,
+                "image_after": image_path,
+                "tooltip_image": "",
+                "tooltip_text": "",
+                "ocr_text": observation.ocr_text,
+                "state_source": observation.state_source,
+                "state_confidence": observation.state_confidence,
+                "visible_keywords": "|".join(observation.visible_keywords),
+            }
+        )
+        logging.info("Recorded label=%s state=%s", label, observation.state)
 
     def _inside_window(self, window, x: int, y: int) -> bool:
         return window.left <= x <= window.left + window.width and window.top <= y <= window.top + window.height
@@ -259,6 +384,7 @@ class TeachModeRecorder:
             "time",
             "session_id",
             "event_type",
+            "label",
             "button",
             "screen_x",
             "screen_y",
@@ -272,7 +398,12 @@ class TeachModeRecorder:
             "screen_id_after",
             "image_before",
             "image_after",
+            "tooltip_image",
+            "tooltip_text",
             "ocr_text",
+            "state_source",
+            "state_confidence",
+            "visible_keywords",
         ]
 
 

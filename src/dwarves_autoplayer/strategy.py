@@ -23,6 +23,7 @@ class StrategyActionSpec:
     target_y_ratio: float | None = None
     confidence: float | None = None
     source: str = ""
+    action_label: str = ""
 
 
 @dataclass(frozen=True)
@@ -117,6 +118,7 @@ class KnowledgeStrategy:
             action_type="click",
             confidence=proposal.confidence,
             source=proposal.source,
+            action_label=proposal.action_label,
         )
 
     def consult(self, state: str, state_elapsed: float, action: StrategyActionSpec) -> StrategyDecision:

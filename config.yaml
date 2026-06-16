@@ -28,6 +28,11 @@ tooltip_reader:
   data_dir: "learning_data/tooltips"
   hover_seconds: 0.9
 
+perception:
+  ocr_enabled: true
+  keyword_state_detection: true
+  ocr_cache_size: 100
+
 state_playbook:
   enabled: true
 
@@ -121,3 +126,13 @@ teach_mode:
   screenshot_interval_seconds: 2.0
   after_click_delay_seconds: 0.45
   ocr_enabled: true
+  hover_capture_enabled: true
+  hover_stable_seconds: 1.1
+  hover_min_interval_seconds: 3.0
+  label_hotkeys:
+    "ctrl+alt+1": "good_choice"
+    "ctrl+alt+2": "bad_choice"
+    "ctrl+alt+3": "compare_tooltip"
+    "ctrl+alt+4": "equip_gear"
+    "ctrl+alt+5": "place_relic"
+    "ctrl+alt+6": "skip_item"

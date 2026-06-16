@@ -18,6 +18,7 @@ class LearnedActionProposal:
     confidence: float
     source: str
     reason: str
+    action_label: str = ""
 
 
 class LearnedPolicy:
@@ -84,6 +85,7 @@ class LearnedPolicy:
             confidence=confidence,
             source="screen_demonstration",
             reason=f"matched taught screen at hamming distance {distance}",
+            action_label=str(action.get("action_label", "")),
         )
 
     def _state_match(self, state: str) -> LearnedActionProposal | None:
@@ -106,6 +108,7 @@ class LearnedPolicy:
             confidence=float(action.get("confidence", 0.0)),
             source="state_demonstration",
             reason=f"using common taught click for state={state} count={action.get('count')}",
+            action_label=str(action.get("action_label", "")),
         )
 
     def _load_policy(self) -> dict[str, Any]:

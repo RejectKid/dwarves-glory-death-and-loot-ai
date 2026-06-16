@@ -6,6 +6,8 @@ from pathlib import Path
 import cv2
 
 from dwarves_autoplayer.bot import load_config
+from dwarves_autoplayer.learned_policy import LearnedPolicy
+from dwarves_autoplayer.perception import PerceptionEngine
 from dwarves_autoplayer.playbook import DwarvesPlaybook
 from dwarves_autoplayer.strategy import KnowledgeStrategy
 
@@ -32,12 +34,37 @@ def main() -> None:
         raise SystemExit(f"Could not read image: {path}")
 
     config = load_config()
-    playbook = DwarvesPlaybook(config, KnowledgeStrategy(Path.cwd(), config))
-    state = playbook.classify(image)
-    action = playbook.choose_action(image)
+    strategy = KnowledgeStrategy(Path.cwd(), config)
+    playbook = DwarvesPlaybook(config, strategy)
+    perception = PerceptionEngine(Path.cwd(), config)
+    state_hint = playbook.classify(image)
+    observation = perception.observe(image, state_hint.value)
+    action = playbook.choose_action(image, state_override=observation.state)
+    learned_policy = LearnedPolicy(Path.cwd(), config.get("strategy", {}).get("learned_policy", {}))
+    learned_proposal = learned_policy.propose(image, observation.state)
 
     print(f"image: {path}")
-    print(f"state: {state.value}")
+    print(f"state: {observation.state}")
+    print(f"state_hint: {state_hint.value}")
+    print(f"state_source: {observation.state_source}")
+    print(f"state_confidence: {observation.state_confidence}")
+    print(f"screen_id: {observation.screen_id}")
+    print(f"ocr_available: {perception.ocr_available}")
+    print(f"visible_keywords: {', '.join(observation.visible_keywords) or 'none'}")
+    if observation.ocr_text:
+        print(f"ocr_excerpt: {observation.ocr_text[:240]}")
+    policy_summary = learned_policy.summary()
+    print(
+        "learned_policy: "
+        f"available={policy_summary['available']} "
+        f"screen_actions={policy_summary['screen_actions']} "
+        f"state_actions={policy_summary['state_actions']}"
+    )
+    if learned_proposal:
+        print(f"learned_match: {learned_proposal.name}")
+        print(f"learned_match_label: {learned_proposal.action_label or 'unknown'}")
+        print(f"learned_match_confidence: {learned_proposal.confidence}")
+        print(f"learned_match_reason: {learned_proposal.reason}")
     if action:
         height, width = image.shape[:2]
         print(f"action: {action.name}")
@@ -47,6 +74,7 @@ def main() -> None:
         if action.confidence is not None or action.source:
             print(f"learned_source: {action.source or 'unknown'}")
             print(f"learned_confidence: {action.confidence}")
+            print(f"learned_label: {action.action_label or 'unknown'}")
         print(f"rationale: {action.rationale}")
         if action.build_priorities:
             print("build_priorities:")

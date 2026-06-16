@@ -15,6 +15,7 @@ import pygetwindow as gw
 import yaml
 
 from dwarves_autoplayer.playbook import DwarvesPlaybook
+from dwarves_autoplayer.perception import PerceptionEngine
 from dwarves_autoplayer.recorder import ScreenRecorder
 from dwarves_autoplayer.strategy import KnowledgeStrategy
 from dwarves_autoplayer.tooltip_reader import TooltipReader
@@ -116,6 +117,7 @@ class Bot:
         self.quit_requested = False
         self.strategy = KnowledgeStrategy(ROOT, config)
         self.playbook = DwarvesPlaybook(config, self.strategy)
+        self.perception = PerceptionEngine(ROOT, config)
         self.recorder = ScreenRecorder(ROOT, config)
         self.tooltip_reader = TooltipReader(ROOT, config)
 
@@ -134,16 +136,23 @@ class Bot:
 
     def step(self, window) -> bool:
         screen = screenshot_window(window)
-        state = self.playbook.classify(screen)
-        action = self.playbook.choose_action(screen)
-        self.recorder.observe(screen, state.value, action.name if action else None, action.goal if action else None)
+        state_hint = self.playbook.classify(screen)
+        observation = self.perception.observe(screen, state_hint.value)
+        action = self.playbook.choose_action(screen, state_override=observation.state)
+        self.recorder.observe(screen, observation.state, action.name if action else None, action.goal if action else None)
 
         if not action:
-            logging.info("No strategy action for state=%s", state.value)
+            logging.info(
+                "No strategy action for state=%s source=%s confidence=%.2f keywords=%s",
+                observation.state,
+                observation.state_source,
+                observation.state_confidence,
+                ",".join(observation.visible_keywords) or "none",
+            )
             return False
 
-        self.log_decision(state.value, action)
-        self.deliberate_before_action(state.value, action)
+        self.log_decision(observation.state, action)
+        self.deliberate_before_action(observation.state, action)
         x = int(window.width * action.x_ratio)
         y = int(window.height * action.y_ratio)
         tooltip = self.tooltip_reader.read_after_hover(window, x, y, action.name) if self.strategy.should_probe_tooltip(action.name) else None
@@ -232,6 +241,7 @@ class Bot:
         logging.info("Video training samples: %s", summary["video_samples"])
         logging.info("Video state baseline: %s", summary["video_states"])
         logging.info("State playbook enabled: %s", self.playbook.enabled)
+        logging.info("Perception OCR available: %s", self.perception.ocr_available)
         logging.info("Tooltip OCR available: %s", self.tooltip_reader.ocr_available)
         if not self.tooltip_reader.ocr_available:
             logging.info("Tesseract OCR engine is unavailable; tooltip crops will still be saved for later review")
@@ -241,7 +251,12 @@ class Bot:
     def log_decision(self, state: str, action) -> None:
         logging.info("Decision state=%s action=%s goal=%s", state, action.name, action.goal)
         if action.confidence is not None or action.source:
-            logging.info("Decision learned source=%s confidence=%s", action.source or "unknown", action.confidence)
+            logging.info(
+                "Decision learned source=%s confidence=%s label=%s",
+                action.source or "unknown",
+                action.confidence,
+                action.action_label or "unknown",
+            )
         logging.info("Decision rationale: %s", action.rationale)
         if action.build_priorities:
             logging.info("Decision build priorities: %s", " | ".join(action.build_priorities))

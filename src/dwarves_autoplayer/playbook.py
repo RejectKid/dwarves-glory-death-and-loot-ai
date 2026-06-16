@@ -14,10 +14,17 @@ from dwarves_autoplayer.strategy import KnowledgeStrategy, StrategyDecision
 
 class GameState(str, Enum):
     MAIN_HALL = "main_hall"
+    TAVERN = "tavern"
+    STORAGE = "storage"
+    FORGE = "forge"
+    RECRUIT_DWARVES = "recruit_dwarves"
+    LOOT = "loot"
     SHOP_MENU = "shop_menu"
     BATTLE_SELECT = "battle_select"
     BATTLE_RUNNING = "battle_running"
     BATTLE_REPORT = "battle_report"
+    RAID = "raid"
+    DEFEAT = "defeat"
     UNKNOWN = "unknown"
 
 
@@ -38,6 +45,7 @@ class PlaybookAction:
     source_basis: tuple[str, ...] = ()
     confidence: float | None = None
     source: str = ""
+    action_label: str = ""
 
 
 class DwarvesPlaybook:
@@ -63,11 +71,11 @@ class DwarvesPlaybook:
             return GameState.MAIN_HALL
         return GameState.UNKNOWN
 
-    def choose_action(self, screen: np.ndarray) -> PlaybookAction | None:
+    def choose_action(self, screen: np.ndarray, state_override: str | None = None) -> PlaybookAction | None:
         if not self.enabled:
             return None
 
-        state = self.classify(screen)
+        state = self._state_from_override(state_override) if state_override else self.classify(screen)
         if state != self.last_state:
             logging.info("State changed: %s -> %s", self.last_state.value if self.last_state else "none", state.value)
             self.last_state = state
@@ -97,6 +105,14 @@ class DwarvesPlaybook:
             force_rotate=state_elapsed > self.strategy.force_rotate_after(state.value),
         )
 
+    def _state_from_override(self, state_override: str | None) -> GameState:
+        if not state_override:
+            return GameState.UNKNOWN
+        try:
+            return GameState(state_override)
+        except ValueError:
+            return GameState.UNKNOWN
+
     def _rotate(self, state: GameState, actions: list[PlaybookAction], force_rotate: bool = False) -> PlaybookAction:
         index = self.state_action_index.get(state, 0)
         if force_rotate:
@@ -123,6 +139,7 @@ class DwarvesPlaybook:
             source_basis=tuple(decision.source_basis),
             confidence=spec.confidence,
             source=spec.source,
+            action_label=spec.action_label,
         )
 
     def _looks_like_main_hall(self, screen: np.ndarray) -> bool:

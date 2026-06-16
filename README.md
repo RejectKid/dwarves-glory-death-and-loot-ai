@@ -106,7 +106,18 @@ Each session contains:
 - screen state before and after the click
 - click position as window ratios
 - OCR text when Tesseract is available
+- hover/tooltip crops when your mouse rests over an item
+- optional teaching labels from hotkeys
 - periodic sample screenshots
+
+Teaching label hotkeys:
+
+- `Ctrl+Alt+1`: good choice
+- `Ctrl+Alt+2`: bad choice
+- `Ctrl+Alt+3`: comparing tooltip
+- `Ctrl+Alt+4`: equip gear
+- `Ctrl+Alt+5`: place relic
+- `Ctrl+Alt+6`: skip item
 
 Then train the learned policy:
 
@@ -145,10 +156,26 @@ The runtime bot is now a hybrid:
 The deterministic state machine still recognizes:
 
 - `main_hall`: open battle selection
+- `tavern`
+- `storage`
+- `forge`
+- `recruit_dwarves`
+- `loot`
 - `shop_menu`: return to the battle tab/selection loop
 - `battle_select`: choose a visible battle card, rotating choices if stuck
 - `battle_running`: wait and keep battle speed high
 - `battle_report`: advance back toward the hall/rewards loop
+- `raid`
+- `defeat`
+- `unknown`
+
+The perception layer produces structured observations with:
+
+- screenshot fingerprint
+- visual state hint
+- OCR-refined state when text is readable
+- visible keywords like buy, equip, reroll, remove, relic, artifact, and set
+- configured regions for bottom menu, inventory slots, dwarf cards, relic slots, battle cards, and resources
 
 The old economy cycle is still present but disabled by default. If you turn `strategy.economy_cycle_enabled` back on, it cycles through the bottom hotbar:
 
@@ -245,7 +272,7 @@ If the bot stalls:
 .\diagnose_latest.bat
 ```
 
-That prints the latest screenshot's detected state and planned click. Runtime screenshots and timeline data are saved under:
+That prints the latest screenshot's detected state, OCR availability, visible keywords, learned-policy status, matched training example, planned click, confidence, and rationale. Runtime screenshots and timeline data are saved under:
 
 ```text
 learning_data\screenshots\
@@ -258,6 +285,7 @@ learning_data\runtime_timeline.csv
 - `src\dwarves_autoplayer\teach_mode.py`: human demonstration recorder
 - `src\dwarves_autoplayer\train_from_demonstrations.py`: trains `knowledge\learned_policy.yaml`
 - `src\dwarves_autoplayer\learned_policy.py`: runtime imitation policy
+- `src\dwarves_autoplayer\perception.py`: structured screenshot/OCR observation layer
 - `src\dwarves_autoplayer\playbook.py`: screen classifier and action playbook
 - `src\dwarves_autoplayer\strategy.py`: knowledge-backed runtime strategy
 - `src\dwarves_autoplayer\recorder.py`: screenshots and runtime timeline

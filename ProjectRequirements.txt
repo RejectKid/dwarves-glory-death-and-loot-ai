@@ -1,0 +1,214 @@
+Yep. Here’s the prompt I’d feed another coding AI. It is written as a “build this project” master prompt.
+
+```text
+You are a senior Python/Windows automation engineer building a local AI autoplayer for the Steam game “Dwarves: Glory, Death and Loot.”
+
+Goal:
+Build a real teach/train/play autoplayer, not a dumb autoclicker. The bot should learn from my demonstrations, OCR/tooltips, screenshots, tutorial videos, and strategy notes, then autonomously play the game as intelligently as possible.
+
+Hard safety boundaries:
+- This is for personal/single-player/local automation.
+- Do not bypass anti-cheat.
+- Do not inject into the game.
+- Do not read or modify game memory.
+- Do not patch files.
+- Use only screen capture, mouse/keyboard automation, OCR, image recognition, local files, and optional vision-language model APIs.
+
+Platform:
+- Windows
+- Steam game window
+- Python project
+- Prefer OpenCV, PyAutoGUI, keyboard, pytesseract/Tesseract OCR, YAML/JSON/CSV
+- Project should be a normal git repo with scripts/batch files for setup, teaching, training, running, diagnostics, and reports.
+
+Core idea:
+The project must be organized around a teach/train/play loop.
+
+1. Teach Mode
+Create a tool I can run while I play normally.
+
+It should record:
+- screenshots before and after every click
+- exact mouse click position, both screen coordinates and window-relative ratios
+- current classified screen state
+- after-click screen state
+- screenshot fingerprints/perceptual hashes
+- OCR text visible on screen
+- tooltip OCR when I hover over items
+- timestamps and session IDs
+- optional notes/labels if I press hotkeys
+
+It should save data under:
+learning_data/demonstrations/<session-id>/
+
+Use a CSV or JSONL event log plus screenshot files.
+
+Teach mode must support:
+- pause/resume recording hotkey
+- quit hotkey
+- recording only clicks inside the game window
+- periodic passive screenshots
+- no game automation while teaching
+
+2. Perception Layer
+Build a perception system that converts screenshots into structured observations.
+
+It should detect/classify:
+- main hall
+- tavern
+- storage
+- forge
+- recruit dwarves
+- loot/shop
+- battle select
+- battle running
+- battle report/rewards
+- defeat/restart
+- raid screen
+- unknown/stuck state
+
+It should extract:
+- visible OCR text
+- tooltip text
+- buttons/options
+- inventory slot locations
+- dwarf card locations
+- relic/artifact slot locations
+- battle card areas
+- gold/resources if readable
+- item names, sets, stats, rarity, slot type, role hints
+- dwarf class/profession/role if readable
+
+Use deterministic CV/OCR first. Add interfaces for optional VLM reasoning later.
+
+3. Game State Model
+Build a structured memory model:
+- current run
+- roster up to 10 dwarves
+- each dwarf’s role/class/level
+- gear equipped per dwarf
+- two relic/artifact slots per dwarf
+- inventory items seen
+- relics/artifacts seen
+- current build archetype
+- battle outcomes
+- decisions made and results
+
+Persist this to:
+learning_data/game_memory.json
+
+4. Training From Demonstrations
+Create a trainer that consumes teach-mode sessions.
+
+It should produce:
+knowledge/learned_policy.yaml or .json
+
+The policy should include:
+- screen fingerprint to click/action mappings
+- state-level action clusters
+- confidence scores
+- examples/images for diagnostics
+- OCR/context text associated with decisions
+- click heatmaps or clustered click regions
+- action labels when inferable
+
+Do not pretend videos contain click labels unless they actually do. Tutorial videos can be used for state recognition and strategy notes, but my demonstrations are the primary training data.
+
+5. Strategy/Decision Engine
+The bot should not blindly click down rows or cycle menus.
+
+Decision flow:
+- observe screenshot
+- classify screen
+- extract OCR/tooltips
+- build current structured state
+- list possible actions
+- consult learned policy from demonstrations
+- consult strategy/build rules
+- score action candidates
+- choose only if confidence is high enough
+- otherwise wait, collect more info, hover/read tooltip, or log uncertainty
+
+For gear:
+- click item, then click target dwarf card
+- choose dwarf based on item stats, set, current build, and role
+- avoid removing/replacing good gear unless replacement is clearly better
+
+For relics/artifacts:
+- click relic/artifact item, then click one of the two small boxes below the intended dwarf
+- never place relics directly onto the dwarf body
+- fill useful relic slots by role/build
+- avoid overwriting good relics unless confident
+
+For recruiting:
+- compare available dwarves
+- prefer team composition: frontline, carry, healer/support, magic/AoE/flex
+- eventually handle up to 10 dwarves
+
+For battle:
+- choose fights based on expected difficulty/reward if readable
+- otherwise imitate my demonstrations
+- advance battle/reward screens reliably
+- restart after defeat
+
+6. Autoplay Mode
+Autoplay should:
+- use learned demonstrations first
+- use deterministic safe helpers second
+- use old macro behavior only as an explicit fallback config option
+- log every decision with state, action, confidence, rationale, OCR text, and source
+- save screenshots/timeline for debugging
+- avoid destructive actions such as sell, delete, retire, reset, remove, new clan unless explicitly planned
+
+7. Diagnostics
+Add tools/scripts:
+- setup.bat
+- teach_mode.bat
+- train_demonstrations.bat
+- run_autonomous.bat
+- diagnose_latest.bat
+- memory_report.bat
+- knowledge_report.bat
+
+Diagnostics should explain:
+- current detected state
+- what action would be taken
+- why
+- confidence
+- what training example matched
+- whether OCR is working
+- why an action was skipped
+
+8. Documentation
+Write README instructions for:
+- installing Python deps
+- installing Tesseract
+- running teach mode
+- training from demonstrations
+- running autoplay
+- adding tutorial videos
+- what videos can and cannot teach
+- tuning config
+- collecting better training data
+
+Implementation quality:
+- Keep code modular.
+- Use config.yaml for tunable coordinates/confidence thresholds.
+- Use typed dataclasses where useful.
+- Add compile/test commands.
+- Do not claim the bot is “near perfect” until perception and policy are verified.
+- Prefer doing nothing over low-confidence bad clicks.
+- Commit changes to git with meaningful messages.
+
+Acceptance criteria:
+- I can run teach_mode.bat, play the game, and get a demonstration session with screenshots and click logs.
+- I can run train_demonstrations.bat and get a learned policy file.
+- I can run run_autonomous.bat and see it consult the learned policy before clicking.
+- It logs confidence and reasoning.
+- It does not blindly equip gear/relics without reading or matching a learned behavior.
+- Gear goes onto dwarf cards.
+- Relics/artifacts go into the two boxes below dwarves.
+- If no confident action exists, it waits/logs instead of making random strategic decisions.
+```
+
+I’d use that as the “north star” prompt. The most important line in it is: **prefer doing nothing over low-confidence bad clicks**. That one sentence would have prevented most of the chaos from the earlier versions.
