@@ -7,6 +7,9 @@ window_title_contains:
 loop_delay_seconds: 0.35
 log_file: "bot.log"
 
+ocr:
+  tesseract_cmd: "C:\\Program Files\\Tesseract-OCR\\tesseract.exe"
+
 deliberation:
   enabled: true
   default_seconds: 0.6

@@ -19,6 +19,7 @@ import keyboard
 import numpy as np
 
 from dwarves_autoplayer.bot import CONFIG_PATH, ROOT, find_game_window, load_config, screenshot_window
+from dwarves_autoplayer.ocr import load_pytesseract
 from dwarves_autoplayer.perception import PerceptionEngine
 from dwarves_autoplayer.playbook import DwarvesPlaybook
 from dwarves_autoplayer.screen_features import fingerprint
@@ -35,9 +36,9 @@ class ClickEvent:
 
 
 class DemoOcrReader:
-    def __init__(self, enabled: bool) -> None:
+    def __init__(self, enabled: bool, config: dict[str, Any]) -> None:
         self.enabled = enabled
-        self._pytesseract = self._load_pytesseract()
+        self._pytesseract = load_pytesseract(config)
 
     @property
     def available(self) -> bool:
@@ -63,14 +64,6 @@ class DemoOcrReader:
             return ""
         return " ".join(text.split())
 
-    def _load_pytesseract(self):
-        try:
-            import pytesseract
-
-            return pytesseract
-        except ImportError:
-            return None
-
 
 class TeachModeRecorder:
     def __init__(self, config: dict[str, Any], session_name: str | None = None) -> None:
@@ -86,7 +79,7 @@ class TeachModeRecorder:
         self.hover_stable_seconds = float(teach_config.get("hover_stable_seconds", 1.1))
         self.hover_min_interval = float(teach_config.get("hover_min_interval_seconds", 3.0))
         self.label_hotkeys = dict(teach_config.get("label_hotkeys", {}))
-        self.ocr = DemoOcrReader(bool(teach_config.get("ocr_enabled", True)))
+        self.ocr = DemoOcrReader(bool(teach_config.get("ocr_enabled", True)), config)
         self.title_parts = config.get("window_title_contains", ["Dwarves"])
         self.playbook = DwarvesPlaybook(config, KnowledgeStrategy(ROOT, config))
         self.perception = PerceptionEngine(ROOT, config)

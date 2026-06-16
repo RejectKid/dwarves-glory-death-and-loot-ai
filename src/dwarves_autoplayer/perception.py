@@ -8,6 +8,7 @@ from typing import Any
 import cv2
 import numpy as np
 
+from dwarves_autoplayer.ocr import load_pytesseract
 from dwarves_autoplayer.screen_features import fingerprint
 
 
@@ -49,7 +50,7 @@ class PerceptionEngine:
         self.ocr_enabled = bool(perception_config.get("ocr_enabled", True))
         self.keyword_state_detection = bool(perception_config.get("keyword_state_detection", True))
         self.ocr_cache_size = int(perception_config.get("ocr_cache_size", 100))
-        self._pytesseract = self._load_pytesseract()
+        self._pytesseract = load_pytesseract(config)
         self._ocr_cache: dict[str, str] = {}
 
     @property
@@ -213,11 +214,3 @@ class PerceptionEngine:
             "battle_cards": battle_cards,
             "resources": resources,
         }
-
-    def _load_pytesseract(self):
-        try:
-            import pytesseract
-
-            return pytesseract
-        except ImportError:
-            return None

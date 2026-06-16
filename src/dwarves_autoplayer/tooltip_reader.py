@@ -11,6 +11,8 @@ import cv2
 import numpy as np
 import pyautogui
 
+from dwarves_autoplayer.ocr import load_pytesseract
+
 
 @dataclass(frozen=True)
 class TooltipObservation:
@@ -27,7 +29,7 @@ class TooltipReader:
         self.hover_seconds = float(tooltip_config.get("hover_seconds", 0.45))
         self.data_dir = root / tooltip_config.get("data_dir", "learning_data/tooltips")
         self.data_dir.mkdir(parents=True, exist_ok=True)
-        self._pytesseract = self._load_pytesseract()
+        self._pytesseract = load_pytesseract(config)
 
     @property
     def ocr_available(self) -> bool:
@@ -90,11 +92,3 @@ class TooltipReader:
             logging.info("Tooltip OCR unavailable at runtime: %s", exc)
             return ""
         return " ".join(text.split())
-
-    def _load_pytesseract(self):
-        try:
-            import pytesseract
-
-            return pytesseract
-        except ImportError:
-            return None
