@@ -8,6 +8,8 @@ from typing import Any
 import cv2
 import numpy as np
 
+from dwarves_autoplayer.screen_features import fingerprint
+
 
 class ScreenRecorder:
     def __init__(self, root: Path, config: dict[str, Any]) -> None:
@@ -24,17 +26,7 @@ class ScreenRecorder:
         self.data_dir.mkdir(parents=True, exist_ok=True)
 
     def fingerprint(self, screen: np.ndarray) -> str:
-        gray = cv2.cvtColor(screen, cv2.COLOR_BGR2GRAY)
-        small = cv2.resize(gray, (16, 16), interpolation=cv2.INTER_AREA)
-        bits = small > small.mean()
-        value = 0
-        chars: list[str] = []
-        for index, bit in enumerate(bits.flatten()):
-            value = (value << 1) | int(bit)
-            if index % 4 == 3:
-                chars.append(f"{value:x}")
-                value = 0
-        return "".join(chars)
+        return fingerprint(screen)
 
     def observe(self, screen: np.ndarray, state: str, action: str | None, goal: str | None = None) -> str:
         screen_id = self.fingerprint(screen)

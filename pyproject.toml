@@ -28,6 +28,8 @@ dwarves-diagnose = "dwarves_autoplayer.diagnose:main"
 dwarves-train-video = "dwarves_autoplayer.train_from_video:main"
 dwarves-knowledge-report = "dwarves_autoplayer.knowledge_report:main"
 dwarves-memory-report = "dwarves_autoplayer.memory_report:main"
+dwarves-teach = "dwarves_autoplayer.teach_mode:main"
+dwarves-train-demonstrations = "dwarves_autoplayer.train_from_demonstrations:main"
 
 [tool.setuptools]
 package-dir = {"" = "src"}

@@ -221,6 +221,14 @@ class Bot:
         logging.info("S-tier set targets: %s", ", ".join(summary["s_tier_sets"]) or "none")
         logging.info("Chosen build archetype: %s", summary["chosen_build"])
         logging.info("Known roster size: %s", summary["roster_size"])
+        learned = summary.get("learned_policy", {})
+        logging.info(
+            "Learned policy: available=%s clicks=%s screen_actions=%s state_actions=%s",
+            learned.get("available"),
+            learned.get("click_events"),
+            learned.get("screen_actions"),
+            learned.get("state_actions"),
+        )
         logging.info("Video training samples: %s", summary["video_samples"])
         logging.info("Video state baseline: %s", summary["video_states"])
         logging.info("State playbook enabled: %s", self.playbook.enabled)
@@ -232,6 +240,8 @@ class Bot:
 
     def log_decision(self, state: str, action) -> None:
         logging.info("Decision state=%s action=%s goal=%s", state, action.name, action.goal)
+        if action.confidence is not None or action.source:
+            logging.info("Decision learned source=%s confidence=%s", action.source or "unknown", action.confidence)
         logging.info("Decision rationale: %s", action.rationale)
         if action.build_priorities:
             logging.info("Decision build priorities: %s", " | ".join(action.build_priorities))

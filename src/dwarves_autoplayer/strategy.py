@@ -8,6 +8,7 @@ import yaml
 
 from dwarves_autoplayer.baseline import load_baseline
 from dwarves_autoplayer.game_model import BuildPlanner, GameMemory
+from dwarves_autoplayer.learned_policy import LearnedPolicy
 
 
 @dataclass(frozen=True)
@@ -20,6 +21,8 @@ class StrategyActionSpec:
     action_type: str = "click"
     target_x_ratio: float | None = None
     target_y_ratio: float | None = None
+    confidence: float | None = None
+    source: str = ""
 
 
 @dataclass(frozen=True)
@@ -51,6 +54,7 @@ class KnowledgeStrategy:
         self.video_baseline = self._load_yaml(root / "knowledge" / "video_baseline.yaml")
         self.memory = GameMemory(root)
         self.planner = BuildPlanner(self.baseline)
+        self.learned_policy = LearnedPolicy(root, self.config.get("learned_policy", {}))
         self.macro_enabled = bool(self.config.get("economy_cycle_enabled", True))
         self.macro_index = 0
         self.target_cursors: dict[str, int] = {}
@@ -66,11 +70,17 @@ class KnowledgeStrategy:
             "s_tier_sets": sets.get("s_tier", []),
             "video_samples": self.video_baseline.get("total_samples", 0),
             "video_states": video_counts,
+            "learned_policy": self.learned_policy.summary(),
             "chosen_build": self.memory.snapshot().chosen_build,
             "roster_size": len(self.memory.snapshot().units),
         }
 
-    def actions_for_state(self, state: str, state_elapsed: float) -> list[StrategyActionSpec]:
+    def actions_for_state(self, state: str, state_elapsed: float, screen: Any | None = None) -> list[StrategyActionSpec]:
+        if screen is not None:
+            learned = self._learned_action_for_screen(screen, state)
+            if learned:
+                return [learned]
+
         if self.macro_enabled and state in {"main_hall", "shop_menu", "unknown"}:
             return [self.current_macro_action()]
 
@@ -93,6 +103,21 @@ class KnowledgeStrategy:
             ]
 
         return []
+
+    def _learned_action_for_screen(self, screen: Any, state: str) -> StrategyActionSpec | None:
+        proposal = self.learned_policy.propose(screen, state)
+        if proposal is None:
+            return None
+        return StrategyActionSpec(
+            proposal.name,
+            proposal.x_ratio,
+            proposal.y_ratio,
+            cooldown_seconds=1.0,
+            after_delay_seconds=0.55,
+            action_type="click",
+            confidence=proposal.confidence,
+            source=proposal.source,
+        )
 
     def consult(self, state: str, state_elapsed: float, action: StrategyActionSpec) -> StrategyDecision:
         return StrategyDecision(
@@ -182,6 +207,8 @@ class KnowledgeStrategy:
         return [cards[name] for name in orders.get(preference, orders["center_left_right"])]
 
     def _goal_for_action(self, action_name: str, state: str) -> str:
+        if action_name.startswith("learned_"):
+            return "imitate a human-taught decision for this screen/state"
         if action_name.startswith("nav_recruit") or action_name.startswith("recruit_"):
             return "increase roster size and role coverage"
         if action_name.startswith("nav_loot") or action_name.startswith("loot_"):
@@ -206,6 +233,8 @@ class KnowledgeStrategy:
         shopping = strategy.get("shopping", [])
         early = strategy.get("early_game", [])
 
+        if action_name.startswith("learned_"):
+            return "This action comes from teach-mode demonstrations matched against the current screenshot/state."
         if state == "battle_select":
             return "Video baseline shows battle cards as the normal transition into combat; baseline policy favors battle-loop progress when no OCR choice is available."
         if action_name.startswith(("nav_recruit", "recruit_")):
@@ -222,6 +251,8 @@ class KnowledgeStrategy:
 
     def _risks_for_action(self, action_name: str, state: str) -> list[str]:
         risks = ["OCR quality controls whether item/unit choices can be trusted"]
+        if action_name.startswith("learned_"):
+            return ["learned action may be wrong if the screen only looks similar to a taught example"]
         if action_name.startswith(("loot_", "forge_", "storage_", "recruit_", "tavern_", "equip_")):
             risks.append("bot skips smart equip when tooltip text is missing or scores below threshold")
         if action_name.startswith("nav_raid"):
@@ -239,7 +270,9 @@ class KnowledgeStrategy:
         memory = self.memory.snapshot()
         priorities.extend(self.planner.action_guidance(action_name, memory))
 
-        if action_name.startswith(("nav_recruit", "recruit_")):
+        if action_name.startswith("learned_"):
+            priorities.append("follow demonstrated human play when confidence is high")
+        elif action_name.startswith(("nav_recruit", "recruit_")):
             priorities.extend(professions.get("baseline_priority", [])[:3])
         elif action_name.startswith(("nav_loot", "loot_", "nav_forge", "forge_", "nav_storage", "storage_", "equip_")):
             priorities.extend(sets.get("notes", [])[:2])
@@ -257,6 +290,7 @@ class KnowledgeStrategy:
         return [
             f"{sum(coverage.values())} web/wiki/reddit/Steam sources",
             f"{video_samples} sampled tutorial-video frames",
+            f"learned policy screen actions={self.learned_policy.summary()['screen_actions']}",
             f"state={state}",
         ]
 

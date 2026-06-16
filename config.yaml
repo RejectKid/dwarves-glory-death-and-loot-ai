@@ -34,7 +34,14 @@ state_playbook:
 strategy:
   # Until OCR is added, the safest battle-selection rule is to click a visible
   # battle card and rotate if the screen does not change.
-  economy_cycle_enabled: true
+  economy_cycle_enabled: false
+  learned_policy:
+    enabled: true
+    policy_path: "knowledge/learned_policy.yaml"
+    min_confidence: 0.55
+    max_hamming_distance: 42
+    state_fallback_enabled: true
+    state_fallback_min_count: 3
   equip_method: "click_pair"
   min_equip_score: 2.0
   battle_card_preference: "center_left_right"
@@ -108,3 +115,9 @@ strategy:
     - "avoid destructive actions"
     - "prefer fights over idle menus"
     - "use wiki/reddit/video baseline for strategy once screen text is readable"
+
+teach_mode:
+  data_dir: "learning_data/demonstrations"
+  screenshot_interval_seconds: 2.0
+  after_click_delay_seconds: 0.45
+  ocr_enabled: true

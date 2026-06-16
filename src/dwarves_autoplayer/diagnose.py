@@ -44,6 +44,9 @@ def main() -> None:
         print(f"click: x={int(width * action.x_ratio)} y={int(height * action.y_ratio)}")
         print(f"cooldown: {action.cooldown_seconds}s")
         print(f"goal: {action.goal}")
+        if action.confidence is not None or action.source:
+            print(f"learned_source: {action.source or 'unknown'}")
+            print(f"learned_confidence: {action.confidence}")
         print(f"rationale: {action.rationale}")
         if action.build_priorities:
             print("build_priorities:")

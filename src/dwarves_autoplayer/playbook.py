@@ -36,6 +36,8 @@ class PlaybookAction:
     risks: tuple[str, ...] = ()
     build_priorities: tuple[str, ...] = ()
     source_basis: tuple[str, ...] = ()
+    confidence: float | None = None
+    source: str = ""
 
 
 class DwarvesPlaybook:
@@ -85,7 +87,7 @@ class DwarvesPlaybook:
 
     def _action_for_state(self, screen: np.ndarray, state: GameState) -> PlaybookAction | None:
         state_elapsed = time.monotonic() - self.state_seen_at
-        specs = self.strategy.actions_for_state(state.value, state_elapsed)
+        specs = self.strategy.actions_for_state(state.value, state_elapsed, screen=screen)
         if not specs:
             return None
         decisions = [self.strategy.consult(state.value, state_elapsed, spec) for spec in specs]
@@ -119,6 +121,8 @@ class DwarvesPlaybook:
             risks=tuple(decision.risks),
             build_priorities=tuple(decision.build_priorities),
             source_basis=tuple(decision.source_basis),
+            confidence=spec.confidence,
+            source=spec.source,
         )
 
     def _looks_like_main_hall(self, screen: np.ndarray) -> bool:
